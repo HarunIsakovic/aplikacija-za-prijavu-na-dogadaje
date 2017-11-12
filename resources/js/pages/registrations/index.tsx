@@ -1,4 +1,5 @@
 import { Head } from '@inertiajs/react';
+import { CalendarDays, MapPin, ClipboardList } from 'lucide-react';
 
 type EventData = {
     id: number;
@@ -28,17 +29,37 @@ export default function RegistrationsIndex({ registrations }: Props) {
         <>
             <Head title="Moje prijave" />
 
-            <div className="mx-auto max-w-7xl space-y-6 p-6">
+            <div className="mx-auto max-w-7xl space-y-8 p-4 sm:p-6">
                 <div>
-                    <h1 className="text-3xl font-bold">Moje prijave</h1>
+                    <p className="mb-2 text-sm font-medium text-primary">
+                        VAŠI DOGAĐAJI
+                    </p>
+
+                    <h1 className="text-3xl font-bold tracking-tight">
+                        Moje prijave
+                    </h1>
 
                     <p className="mt-2 text-muted-foreground">
-                        Pregledajte događaje na koje ste se prijavili.
+                        Pregledajte događaje na koje ste se prijavili i pratite
+                        status svojih prijava.
                     </p>
                 </div>
 
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">
+                        Pregled prijava
+                    </h2>
+
+                    <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
+                        {registrations.length}{' '}
+                        {registrations.length === 1 ? 'prijava' : 'prijava'}
+                    </span>
+                </div>
+
                 {registrations.length === 0 ? (
-                    <div className="rounded-lg border p-8 text-center">
+                    <div className="rounded-xl border border-dashed p-10 text-center">
+                        <ClipboardList className="mx-auto mb-4 size-12 text-muted-foreground" />
+
                         <h2 className="text-lg font-semibold">
                             Nemate prijava
                         </h2>
@@ -48,67 +69,67 @@ export default function RegistrationsIndex({ registrations }: Props) {
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
                         {registrations.map((registration) => (
                             <article
                                 key={registration.id}
-                                className="rounded-lg border p-5 shadow-sm"
+                                className="rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
                             >
-                                <div className="flex flex-col justify-between gap-4 sm:flex-row">
-                                    <div>
-                                        <h2 className="text-xl font-semibold">
-                                            {registration.event.title}
-                                        </h2>
+                                <div className="flex items-start justify-between gap-3">
+                                    <h2 className="text-lg font-semibold tracking-tight">
+                                        {registration.event.title}
+                                    </h2>
 
-                                        <div className="mt-3 space-y-2 text-sm">
-                                            <p>
-                                                <strong>Kategorija:</strong>{' '}
-                                                {
-                                                    registration.event.category
-                                                        .name
-                                                }
-                                            </p>
+                                    <span
+                                        className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+                                            registration.status ===
+                                            'registered'
+                                                ? 'bg-green-500/10 text-green-600'
+                                                : 'bg-muted text-muted-foreground'
+                                        }`}
+                                    >
+                                        {registration.status === 'registered'
+                                            ? 'Prijavljen'
+                                            : 'Otkazan'}
+                                    </span>
+                                </div>
 
-                                            <p>
-                                                <strong>Lokacija:</strong>{' '}
-                                                {registration.event.location}
-                                            </p>
-
-                                            <p>
-                                                <strong>Početak:</strong>{' '}
-                                                {new Date(
-                                                    registration.event
-                                                        .starts_at,
-                                                ).toLocaleString('bs-BA')}
-                                            </p>
-                                        </div>
+                                <div className="mt-4 space-y-3 border-y py-4 text-sm">
+                                    <div className="flex items-center gap-3">
+                                        <ClipboardList className="size-4 shrink-0 text-muted-foreground" />
+                                        <span>
+                                            {registration.event.category.name}
+                                        </span>
                                     </div>
 
-                                    <div className="flex flex-col gap-2 sm:items-end">
-                                        <span
-                                            className={`rounded-full px-3 py-1 text-sm font-medium ${
-                                                registration.status ===
-                                                'registered'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-muted text-muted-foreground'
-                                            }`}
-                                        >
-                                            {registration.status ===
-                                            'registered'
-                                                ? 'Prijavljen'
-                                                : 'Otkazan'}
-                                        </span>
+                                    <div className="flex items-center gap-3">
+                                        <MapPin className="size-4 shrink-0 text-muted-foreground" />
+                                        <span>{registration.event.location}</span>
+                                    </div>
 
-                                        {registration.status ===
-                                            'registered' && (
-                                            <span className="text-sm text-muted-foreground">
-                                                {registration.attended
-                                                    ? 'Prisustvovao'
-                                                    : 'Prisustvo nije evidentirano'}
-                                            </span>
-                                        )}
+                                    <div className="flex items-center gap-3">
+                                        <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
+                                        <span>
+                                            {new Date(
+                                                registration.event.starts_at,
+                                            ).toLocaleString('bs-BA')}
+                                        </span>
                                     </div>
                                 </div>
+
+                                {registration.status === 'registered' && (
+                                    <div className="mt-4">
+                                        <p className="text-sm text-muted-foreground">
+                                            Status prisustva
+                                        </p>
+
+                                        <p className="mt-1 text-sm font-medium">
+                                            {registration.attended
+                                                ? 'Prisustvovali ste događaju'
+                                                : 'Prisustvo još nije evidentirano'}
+                                        </p>
+                                    </div>
+                                )}
                             </article>
                         ))}
                     </div>
