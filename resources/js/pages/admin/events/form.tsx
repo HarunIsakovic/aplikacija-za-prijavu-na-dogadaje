@@ -124,7 +124,10 @@ export default function EventForm({ categories, event, tags }: Props) {
                         {tags.length > 0 ? (
                             <div className="grid gap-2">
                                 {tags.map((tag) => (
-                                    <div key={tag.id} className="flex items-center gap-2">
+                                    <div
+                                        key={tag.id}
+                                        className="flex items-center gap-2"
+                                    >
                                         <input
                                             id={`tag-${tag.id}`}
                                             type="checkbox"
@@ -132,7 +135,8 @@ export default function EventForm({ categories, event, tags }: Props) {
                                             value={tag.id}
                                             defaultChecked={
                                                 event?.tags.some(
-                                                    (eventTag) => eventTag.id === tag.id,
+                                                    (eventTag) =>
+                                                        eventTag.id === tag.id,
                                                 ) ?? false
                                             }
                                             className="h-4 w-4 rounded border-input"

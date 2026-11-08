@@ -56,9 +56,7 @@ export default function Index({ tags, flash }: Props) {
                                 <InputError message={errors.name} />
                             </div>
 
-                            <Button disabled={processing}>
-                                Dodaj tag
-                            </Button>
+                            <Button disabled={processing}>Dodaj tag</Button>
                         </>
                     )}
                 </Form>
@@ -106,9 +104,7 @@ export default function Index({ tags, flash }: Props) {
 
                 <div className="mt-6">
                     {tags.length === 0 ? (
-                        <p className="text-gray-600">
-                            Trenutno nema tagova.
-                        </p>
+                        <p className="text-gray-600">Trenutno nema tagova.</p>
                     ) : (
                         <ul className="space-y-2">
                             {tags.map((tag) => (

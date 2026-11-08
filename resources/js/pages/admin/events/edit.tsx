@@ -39,11 +39,7 @@ export default function Edit({ categories, event, tags }: Props) {
             <div className="p-6">
                 <h1 className="text-2xl font-bold">Uredi događaj</h1>
 
-                <EventForm
-                    categories={categories}
-                    event={event}
-                    tags={tags}
-                />
+                <EventForm categories={categories} event={event} tags={tags} />
 
                 <Link
                     href="/admin/events"
