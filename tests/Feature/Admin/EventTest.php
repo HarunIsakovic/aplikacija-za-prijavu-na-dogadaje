@@ -2,6 +2,7 @@
 
 use App\Models\Category;
 use App\Models\Event;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -238,4 +239,122 @@ test('admin ne moze kreirati dogadaj sa neispravnom slikom', function () {
     $response->assertSessionHasErrors(['image']);
 
     $this->assertDatabaseCount('events', 0);
+});
+
+
+test('admin moze kreirati dogadaj sa vise tagova', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Radionica',
+    ]);
+
+    $tag1 = Tag::create([
+        'name' => 'Besplatno',
+    ]);
+
+    $tag2 = Tag::create([
+        'name' => 'Online',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->post(route('admin.events.store'), [
+            'category_id' => $category->id,
+            'title' => 'Laravel radionica',
+            'description' => 'Radionica za pocetnike.',
+            'location' => 'Online',
+            'starts_at' => now()->addDays(10)->format('Y-m-d H:i:s'),
+            'ends_at' => null,
+            'capacity' => 30,
+            'status' => 'published',
+            'tags' => [$tag1->id, $tag2->id],
+        ]);
+
+    $response->assertRedirect(route('admin.events.index'));
+
+    $event = Event::where('title', 'Laravel radionica')->firstOrFail();
+
+    $this->assertDatabaseHas('event_tag', [
+        'event_id' => $event->id,
+        'tag_id' => $tag1->id,
+    ]);
+
+    $this->assertDatabaseHas('event_tag', [
+        'event_id' => $event->id,
+        'tag_id' => $tag2->id,
+    ]);
+
+    expect($event->tags)->toHaveCount(2);
+});
+
+
+test('admin moze urediti tagove dogadaja', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Radionica',
+    ]);
+
+    $tag1 = Tag::create([
+        'name' => 'Besplatno',
+    ]);
+
+    $tag2 = Tag::create([
+        'name' => 'Online',
+    ]);
+
+    $tag3 = Tag::create([
+        'name' => 'Za pocetnike',
+    ]);
+
+    $event = Event::create([
+        'category_id' => $category->id,
+        'title' => 'Laravel radionica',
+        'description' => 'Radionica za pocetnike.',
+        'location' => 'Online',
+        'starts_at' => now()->addDays(10),
+        'ends_at' => null,
+        'capacity' => 30,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $event->tags()->sync([$tag1->id, $tag2->id]);
+
+    $response = $this->actingAs($admin)
+        ->put(route('admin.events.update', $event), [
+            'category_id' => $category->id,
+            'title' => 'Laravel radionica',
+            'description' => 'Radionica za pocetnike.',
+            'location' => 'Online',
+            'starts_at' => now()->addDays(10)->format('Y-m-d H:i:s'),
+            'ends_at' => null,
+            'capacity' => 30,
+            'status' => 'published',
+            'tags' => [$tag3->id],
+        ]);
+
+    $response->assertRedirect(route('admin.events.index'));
+
+    $this->assertDatabaseHas('event_tag', [
+        'event_id' => $event->id,
+        'tag_id' => $tag3->id,
+    ]);
+
+    $this->assertDatabaseMissing('event_tag', [
+        'event_id' => $event->id,
+        'tag_id' => $tag1->id,
+    ]);
+
+    $this->assertDatabaseMissing('event_tag', [
+        'event_id' => $event->id,
+        'tag_id' => $tag2->id,
+    ]);
+
+    expect($event->fresh()->tags)->toHaveCount(1);
+    expect($event->fresh()->tags->first()->id)->toBe($tag3->id);
 });

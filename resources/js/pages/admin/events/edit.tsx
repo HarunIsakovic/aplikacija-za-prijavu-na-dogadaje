@@ -6,6 +6,11 @@ type Category = {
     name: string;
 };
 
+type Tag = {
+    id: number;
+    name: string;
+};
+
 type EventData = {
     id: number;
     category_id: number;
@@ -17,14 +22,16 @@ type EventData = {
     capacity: number;
     image: string | null;
     status: 'draft' | 'published';
+    tags: Tag[];
 };
 
 type Props = {
     categories: Category[];
     event: EventData;
+    tags: Tag[];
 };
 
-export default function Edit({ categories, event }: Props) {
+export default function Edit({ categories, event, tags }: Props) {
     return (
         <>
             <Head title="Uredi događaj" />
@@ -32,7 +39,11 @@ export default function Edit({ categories, event }: Props) {
             <div className="p-6">
                 <h1 className="text-2xl font-bold">Uredi događaj</h1>
 
-                <EventForm categories={categories} event={event} />
+                <EventForm
+                    categories={categories}
+                    event={event}
+                    tags={tags}
+                />
 
                 <Link
                     href="/admin/events"

@@ -6,11 +6,17 @@ type Category = {
     name: string;
 };
 
-type Props = {
-    categories: Category[];
+type Tag = {
+    id: number;
+    name: string;
 };
 
-export default function Create({ categories }: Props) {
+type Props = {
+    categories: Category[];
+    tags: Tag[];
+};
+
+export default function Create({ categories, tags }: Props) {
     return (
         <>
             <Head title="Novi događaj" />
@@ -18,7 +24,7 @@ export default function Create({ categories }: Props) {
             <div className="p-6">
                 <h1 className="text-2xl font-bold">Dodaj događaj</h1>
 
-                <EventForm categories={categories} />
+                <EventForm categories={categories} tags={tags} />
 
                 <Link
                     href="/admin/events"
