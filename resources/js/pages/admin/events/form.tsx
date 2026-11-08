@@ -16,6 +16,11 @@ type Category = {
     name: string;
 };
 
+type Tag = {
+    id: number;
+    name: string;
+};
+
 type EventData = {
     id: number;
     category_id: number;
@@ -27,14 +32,16 @@ type EventData = {
     capacity: number;
     image: string | null;
     status: 'draft' | 'published';
+    tags: Tag[];
 };
 
 type Props = {
     categories: Category[];
     event?: EventData;
+    tags: Tag[];
 };
 
-export default function EventForm({ categories, event }: Props) {
+export default function EventForm({ categories, event, tags }: Props) {
     const isEditing = Boolean(event);
 
     return (
@@ -109,6 +116,45 @@ export default function EventForm({ categories, event }: Props) {
                             </SelectContent>
                         </Select>
                         <InputError message={errors.category_id} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Tagovi</Label>
+
+                        {tags.length > 0 ? (
+                            <div className="grid gap-2">
+                                {tags.map((tag) => (
+                                    <div
+                                        key={tag.id}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <input
+                                            id={`tag-${tag.id}`}
+                                            type="checkbox"
+                                            name="tags[]"
+                                            value={tag.id}
+                                            defaultChecked={
+                                                event?.tags.some(
+                                                    (eventTag) =>
+                                                        eventTag.id === tag.id,
+                                                ) ?? false
+                                            }
+                                            className="h-4 w-4 rounded border-input"
+                                        />
+
+                                        <Label htmlFor={`tag-${tag.id}`}>
+                                            {tag.name}
+                                        </Label>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                Trenutno nema dostupnih tagova.
+                            </p>
+                        )}
+
+                        <InputError message={errors.tags} />
                     </div>
 
                     <div className="grid gap-2">

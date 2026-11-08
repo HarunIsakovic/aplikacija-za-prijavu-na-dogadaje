@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Event;
+use App\Models\Tag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -31,8 +32,13 @@ class EventController extends Controller
             ->orderBy('name')
             ->get();
 
+        $tags = Tag::query()
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('admin/events/create', [
             'categories' => $categories,
+            'tags' => $tags,
         ]);
     }
 
@@ -48,13 +54,21 @@ class EventController extends Controller
             'capacity' => ['required', 'integer', 'min:1'],
             'status' => ['required', 'in:draft,published'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['integer', 'distinct', 'exists:tags,id'],
         ]);
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('events', 'public');
         }
 
-        Event::create($validated);
+        $tagIds = $validated['tags'] ?? [];
+
+        unset($validated['tags']);
+
+        $event = Event::create($validated);
+
+        $event->tags()->sync($tagIds);
 
         return redirect()
             ->route('admin.events.index')
@@ -67,9 +81,16 @@ class EventController extends Controller
             ->orderBy('name')
             ->get();
 
+        $tags = Tag::query()
+            ->orderBy('name')
+            ->get();
+
+        $event->load('tags');
+
         return Inertia::render('admin/events/edit', [
             'event' => $event,
             'categories' => $categories,
+            'tags' => $tags,
         ]);
     }
 
@@ -85,6 +106,8 @@ class EventController extends Controller
             'capacity' => ['required', 'integer', 'min:1'],
             'status' => ['required', 'in:draft,published'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['integer', 'distinct', 'exists:tags,id'],
         ]);
 
         if ($request->hasFile('image')) {
@@ -97,7 +120,13 @@ class EventController extends Controller
             unset($validated['image']);
         }
 
+        $tagIds = $validated['tags'] ?? [];
+
+        unset($validated['tags']);
+
         $event->update($validated);
+
+        $event->tags()->sync($tagIds);
 
         return redirect()
             ->route('admin.events.index')
