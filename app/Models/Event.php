@@ -28,6 +28,9 @@ class Event extends Model
         return $this->belongsTo(Category::class);
     }
 
+    /**
+     * @return BelongsToMany<Tag, $this>
+     */
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class);

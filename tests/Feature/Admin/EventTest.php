@@ -241,7 +241,6 @@ test('admin ne moze kreirati dogadaj sa neispravnom slikom', function () {
     $this->assertDatabaseCount('events', 0);
 });
 
-
 test('admin moze kreirati dogadaj sa vise tagova', function () {
     $admin = User::factory()->create([
         'role' => 'admin',
@@ -288,7 +287,6 @@ test('admin moze kreirati dogadaj sa vise tagova', function () {
 
     expect($event->tags)->toHaveCount(2);
 });
-
 
 test('admin moze urediti tagove dogadaja', function () {
     $admin = User::factory()->create([
