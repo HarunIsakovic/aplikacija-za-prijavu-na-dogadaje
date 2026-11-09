@@ -1,4 +1,3 @@
-
 import { Head, router } from '@inertiajs/react';
 
 type Category = {
@@ -30,10 +29,7 @@ type Props = {
 };
 
 export default function EventShow({ event }: Props) {
-    const availableSeats = Math.max(
-        0,
-        event.capacity - event.registered_count,
-    );
+    const availableSeats = Math.max(0, event.capacity - event.registered_count);
 
     function registerForEvent() {
         router.post(`/events/${event.id}/registrations`);
@@ -56,9 +52,7 @@ export default function EventShow({ event }: Props) {
                         ← Nazad na događaje
                     </a>
 
-                    <h1 className="mt-4 text-3xl font-bold">
-                        {event.title}
-                    </h1>
+                    <h1 className="mt-4 text-3xl font-bold">{event.title}</h1>
                 </div>
 
                 <div className="rounded-lg border p-6 shadow-sm">
@@ -74,13 +68,11 @@ export default function EventShow({ event }: Props) {
                         </div>
 
                         <div>
-                            <strong>Kategorija:</strong>{' '}
-                            {event.category.name}
+                            <strong>Kategorija:</strong> {event.category.name}
                         </div>
 
                         <div>
-                            <strong>Lokacija:</strong>{' '}
-                            {event.location}
+                            <strong>Lokacija:</strong> {event.location}
                         </div>
 
                         <div>
@@ -91,13 +83,15 @@ export default function EventShow({ event }: Props) {
                         {event.ends_at && (
                             <div>
                                 <strong>Završetak:</strong>{' '}
-                                {new Date(event.ends_at).toLocaleString('bs-BA')}
+                                {new Date(event.ends_at).toLocaleString(
+                                    'bs-BA',
+                                )}
                             </div>
                         )}
 
                         <div>
-                            <strong>Ukupan kapacitet:</strong>{' '}
-                            {event.capacity} mjesta
+                            <strong>Ukupan kapacitet:</strong> {event.capacity}{' '}
+                            mjesta
                         </div>
 
                         <div>
@@ -106,8 +100,7 @@ export default function EventShow({ event }: Props) {
                         </div>
 
                         <div>
-                            <strong>Slobodna mjesta:</strong>{' '}
-                            {availableSeats}
+                            <strong>Slobodna mjesta:</strong> {availableSeats}
                         </div>
 
                         {event.tags.length > 0 && (

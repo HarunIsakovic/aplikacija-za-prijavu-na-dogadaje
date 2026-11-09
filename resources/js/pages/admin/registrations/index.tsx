@@ -111,13 +111,15 @@ export default function EventRegistrationsIndex({
                                         </td>
 
                                         <td className="p-4">
-                                            {registration.status === 'registered'
+                                            {registration.status ===
+                                            'registered'
                                                 ? 'Prijavljen'
                                                 : 'Otkazan'}
                                         </td>
 
                                         <td className="p-4">
-                                            {registration.status === 'registered'
+                                            {registration.status ===
+                                            'registered'
                                                 ? registration.attended
                                                     ? 'Prisustvovao'
                                                     : 'Nije evidentirano'
@@ -125,11 +127,14 @@ export default function EventRegistrationsIndex({
                                         </td>
 
                                         <td className="p-4">
-                                            {registration.status === 'registered' && (
+                                            {registration.status ===
+                                                'registered' && (
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        toggleAttendance(registration)
+                                                        toggleAttendance(
+                                                            registration,
+                                                        )
                                                     }
                                                     className="rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted"
                                                 >

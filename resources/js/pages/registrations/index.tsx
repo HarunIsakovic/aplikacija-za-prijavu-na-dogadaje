@@ -23,9 +23,7 @@ type Props = {
     registrations: Registration[];
 };
 
-export default function RegistrationsIndex({
-    registrations,
-}: Props) {
+export default function RegistrationsIndex({ registrations }: Props) {
     return (
         <>
             <Head title="Moje prijave" />
@@ -65,7 +63,10 @@ export default function RegistrationsIndex({
                                         <div className="mt-3 space-y-2 text-sm">
                                             <p>
                                                 <strong>Kategorija:</strong>{' '}
-                                                {registration.event.category.name}
+                                                {
+                                                    registration.event.category
+                                                        .name
+                                                }
                                             </p>
 
                                             <p>
@@ -76,7 +77,8 @@ export default function RegistrationsIndex({
                                             <p>
                                                 <strong>Početak:</strong>{' '}
                                                 {new Date(
-                                                    registration.event.starts_at,
+                                                    registration.event
+                                                        .starts_at,
                                                 ).toLocaleString('bs-BA')}
                                             </p>
                                         </div>
@@ -85,17 +87,20 @@ export default function RegistrationsIndex({
                                     <div className="flex flex-col gap-2 sm:items-end">
                                         <span
                                             className={`rounded-full px-3 py-1 text-sm font-medium ${
-                                                registration.status === 'registered'
+                                                registration.status ===
+                                                'registered'
                                                     ? 'bg-green-100 text-green-800'
                                                     : 'bg-muted text-muted-foreground'
                                             }`}
                                         >
-                                            {registration.status === 'registered'
+                                            {registration.status ===
+                                            'registered'
                                                 ? 'Prijavljen'
                                                 : 'Otkazan'}
                                         </span>
 
-                                        {registration.status === 'registered' && (
+                                        {registration.status ===
+                                            'registered' && (
                                             <span className="text-sm text-muted-foreground">
                                                 {registration.attended
                                                     ? 'Prisustvovao'

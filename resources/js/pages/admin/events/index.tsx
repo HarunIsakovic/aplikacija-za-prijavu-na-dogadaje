@@ -119,7 +119,9 @@ export default function Index({ events, flash }: Props) {
 
                                     <div className="flex flex-wrap gap-2">
                                         <Button asChild variant="outline">
-                                            <Link href={`/admin/events/${event.id}/registrations`}>
+                                            <Link
+                                                href={`/admin/events/${event.id}/registrations`}
+                                            >
                                                 Prijavljeni korisnici
                                             </Link>
                                         </Button>

@@ -55,9 +55,13 @@ export default function EventsIndex({
     }
 
     function registerForEvent(eventId: number) {
-        router.post(`/events/${eventId}/registrations`, {}, {
-            preserveScroll: true,
-        });
+        router.post(
+            `/events/${eventId}/registrations`,
+            {},
+            {
+                preserveScroll: true,
+            },
+        );
     }
 
     function cancelRegistration(eventId: number) {
@@ -101,10 +105,7 @@ export default function EventsIndex({
                             <option value="">Sve kategorije</option>
 
                             {categories.map((category) => (
-                                <option
-                                    key={category.id}
-                                    value={category.id}
-                                >
+                                <option key={category.id} value={category.id}>
                                     {category.name}
                                 </option>
                             ))}
