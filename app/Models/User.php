@@ -50,6 +50,9 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
+    /**
+     * @return HasMany<EventRegistration, $this>
+     */
     public function eventRegistrations(): HasMany
     {
         return $this->hasMany(EventRegistration::class);
