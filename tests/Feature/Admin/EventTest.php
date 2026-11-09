@@ -357,8 +357,6 @@ test('admin moze urediti tagove dogadaja', function () {
     expect($event->fresh()->tags->first()->id)->toBe($tag3->id);
 });
 
-
-
 test('admin moze sakriti objavljeni dogadaj', function () {
     $admin = User::factory()->create([
         'role' => 'admin',

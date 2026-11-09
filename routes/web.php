@@ -2,11 +2,11 @@
 
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
+use App\Http\Controllers\Admin\EventRegistrationController as AdminEventRegistrationController;
 use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\EventController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\EventRegistrationController;
-use App\Http\Controllers\Admin\EventRegistrationController as AdminEventRegistrationController;
+use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 

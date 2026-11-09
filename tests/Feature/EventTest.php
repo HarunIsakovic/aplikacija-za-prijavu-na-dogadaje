@@ -68,7 +68,6 @@ test('neprijavljeni korisnik ne moze pregledati dogadaje', function () {
     $response->assertRedirect(route('login'));
 });
 
-
 test('korisnik moze filtrirati dogadaje po kategoriji', function () {
     $user = User::factory()->create();
 
@@ -114,7 +113,6 @@ test('korisnik moze filtrirati dogadaje po kategoriji', function () {
             ->where('events.0.id', $workshopEvent->id)
         );
 });
-
 
 test('korisnik moze filtrirati dogadaje po tagu', function () {
     $user = User::factory()->create();
@@ -168,7 +166,6 @@ test('korisnik moze filtrirati dogadaje po tagu', function () {
             ->where('events.0.id', $onlineEvent->id)
         );
 });
-
 
 test('korisnik moze vidjeti detalje objavljenog buduceg dogadaja', function () {
     $user = User::factory()->create();

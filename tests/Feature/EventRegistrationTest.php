@@ -148,7 +148,6 @@ test('korisnik se moze ponovo prijaviti nakon otkazivanja', function () {
     )->toBe(1);
 });
 
-
 test('korisnik moze vidjeti svoje prijave', function () {
     $registration = EventRegistration::create([
         'user_id' => $this->user->id,
