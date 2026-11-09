@@ -1,5 +1,11 @@
-import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+﻿import { Link, usePage } from '@inertiajs/react';
+import {
+    BookOpen,
+    CalendarDays,
+    ClipboardList,
+    FolderGit2,
+    LayoutGrid,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -16,10 +22,43 @@ import {
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
-const mainNavItems: NavItem[] = [
+const userNavItems: NavItem[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'DogaÄ‘aji',
+        href: '/events',
+        icon: CalendarDays,
+    },
+    {
+        title: 'Moje prijave',
+        href: '/my-registrations',
+        icon: ClipboardList,
+    },
+];
+
+const adminNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: dashboard(),
+        icon: LayoutGrid,
+    },
+    {
+        title: 'DogaÄ‘aji',
+        href: '/events',
+        icon: CalendarDays,
+    },
+    {
+        title: 'Moje prijave',
+        href: '/my-registrations',
+        icon: ClipboardList,
+    },
+    {
+        title: 'Administracija',
+        href: '/admin',
         icon: LayoutGrid,
     },
 ];
@@ -38,6 +77,9 @@ const footerNavItems: NavItem[] = [
 ];
 
 export function AppSidebar() {
+    const { auth } = usePage().props;
+    const mainNavItems =
+        auth.user?.role === 'admin' ? adminNavItems : userNavItems;
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>

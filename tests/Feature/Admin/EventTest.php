@@ -356,3 +356,44 @@ test('admin moze urediti tagove dogadaja', function () {
     expect($event->fresh()->tags)->toHaveCount(1);
     expect($event->fresh()->tags->first()->id)->toBe($tag3->id);
 });
+
+test('admin moze sakriti objavljeni dogadaj', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Radionica',
+    ]);
+
+    $event = Event::create([
+        'category_id' => $category->id,
+        'title' => 'Objavljena radionica',
+        'description' => 'Opis radionice.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(7),
+        'ends_at' => null,
+        'capacity' => 30,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->put(route('admin.events.update', $event), [
+            'category_id' => $category->id,
+            'title' => 'Objavljena radionica',
+            'description' => 'Opis radionice.',
+            'location' => 'Zenica',
+            'starts_at' => now()->addDays(7)->format('Y-m-d H:i:s'),
+            'ends_at' => null,
+            'capacity' => 30,
+            'status' => 'draft',
+        ]);
+
+    $response->assertRedirect(route('admin.events.index'));
+
+    $this->assertDatabaseHas('events', [
+        'id' => $event->id,
+        'status' => 'draft',
+    ]);
+});
