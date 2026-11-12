@@ -1,10 +1,5 @@
 ﻿import { Head, Link } from '@inertiajs/react';
-import {
-    CalendarDays,
-    Tags,
-    FolderOpen,
-    ArrowRight,
-} from 'lucide-react';
+import { CalendarDays, Tags, FolderOpen, ArrowRight } from 'lucide-react';
 
 const adminSections = [
     {
@@ -16,15 +11,13 @@ const adminSections = [
     },
     {
         title: 'Kategorije',
-        description:
-            'Dodajte, uređujte i pregledajte kategorije događaja.',
+        description: 'Dodajte, uređujte i pregledajte kategorije događaja.',
         href: '/admin/categories',
         icon: FolderOpen,
     },
     {
         title: 'Tagovi',
-        description:
-            'Upravljajte tagovima koji se mogu dodijeliti događajima.',
+        description: 'Upravljajte tagovima koji se mogu dodijeliti događajima.',
         href: '/admin/tags',
         icon: Tags,
     },

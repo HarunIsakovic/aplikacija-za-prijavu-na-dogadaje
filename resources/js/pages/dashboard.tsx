@@ -14,9 +14,9 @@ export default function Dashboard() {
                     </h1>
 
                     <p className="mt-2 text-muted-foreground">
-                        Dobro došli na platformu za prijavu na događaje.
-                        Ovdje možete pronaći događaje koji vas zanimaju
-                        i upravljati svojim prijavama.
+                        Dobro došli na platformu za prijavu na događaje. Ovdje
+                        možete pronaći događaje koji vas zanimaju i upravljati
+                        svojim prijavama.
                     </p>
                 </div>
 
@@ -30,13 +30,11 @@ export default function Dashboard() {
                         </div>
 
                         <div>
-                            <h2 className="font-semibold">
-                                Pregled događaja
-                            </h2>
+                            <h2 className="font-semibold">Pregled događaja</h2>
 
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Pregledajte dostupne događaje i prijavite se
-                                na one koji vas zanimaju.
+                                Pregledajte dostupne događaje i prijavite se na
+                                one koji vas zanimaju.
                             </p>
                         </div>
                     </Link>
@@ -50,12 +48,11 @@ export default function Dashboard() {
                         </div>
 
                         <div>
-                            <h2 className="font-semibold">
-                                Moje prijave
-                            </h2>
+                            <h2 className="font-semibold">Moje prijave</h2>
 
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Pregledajte svoje prijave i pratite njihov status.
+                                Pregledajte svoje prijave i pratite njihov
+                                status.
                             </p>
                         </div>
                     </Link>

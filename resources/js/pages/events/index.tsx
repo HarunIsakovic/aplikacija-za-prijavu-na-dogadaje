@@ -114,7 +114,7 @@ export default function EventsIndex({
                                         filters.tag_id ?? '',
                                     )
                                 }
-                                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                             >
                                 <option value="">Sve kategorije</option>
 
@@ -146,7 +146,7 @@ export default function EventsIndex({
                                         event.target.value,
                                     )
                                 }
-                                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                             >
                                 <option value="">Svi tagovi</option>
 
@@ -161,9 +161,7 @@ export default function EventsIndex({
                 </div>
 
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">
-                        Dostupni događaji
-                    </h2>
+                    <h2 className="text-xl font-semibold">Dostupni događaji</h2>
 
                     <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
                         {events.length}{' '}

@@ -46,9 +46,7 @@ export default function RegistrationsIndex({ registrations }: Props) {
                 </div>
 
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">
-                        Pregled prijava
-                    </h2>
+                    <h2 className="text-xl font-semibold">Pregled prijava</h2>
 
                     <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
                         {registrations.length}{' '}
@@ -82,8 +80,7 @@ export default function RegistrationsIndex({ registrations }: Props) {
 
                                     <span
                                         className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
-                                            registration.status ===
-                                            'registered'
+                                            registration.status === 'registered'
                                                 ? 'bg-green-500/10 text-green-600'
                                                 : 'bg-muted text-muted-foreground'
                                         }`}
@@ -104,7 +101,9 @@ export default function RegistrationsIndex({ registrations }: Props) {
 
                                     <div className="flex items-center gap-3">
                                         <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                                        <span>{registration.event.location}</span>
+                                        <span>
+                                            {registration.event.location}
+                                        </span>
                                     </div>
 
                                     <div className="flex items-center gap-3">

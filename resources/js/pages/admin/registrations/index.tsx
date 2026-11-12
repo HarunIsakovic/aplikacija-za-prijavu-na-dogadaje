@@ -128,9 +128,7 @@ export default function EventRegistrationsIndex({
                 </div>
 
                 <div className="space-y-4">
-                    <h2 className="text-xl font-semibold">
-                        Lista prijava
-                    </h2>
+                    <h2 className="text-xl font-semibold">Lista prijava</h2>
 
                     {registrations.length === 0 ? (
                         <div className="rounded-xl border border-dashed p-10 text-center">
