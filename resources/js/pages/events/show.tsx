@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { CalendarDays } from 'lucide-react';
 
 type Category = {
     id: number;
@@ -12,6 +13,7 @@ type Tag = {
 
 type EventData = {
     id: number;
+    image: string | null;
     title: string;
     description: string;
     location: string;
@@ -53,6 +55,17 @@ export default function EventShow({ event }: Props) {
                     </a>
 
                     <h1 className="mt-4 text-3xl font-bold">{event.title}</h1>
+                    {event.image ? (
+                        <img
+                            src={`/storage/${event.image}`}
+                            alt={event.title}
+                            className="mt-6 h-72 w-full rounded-xl object-cover shadow-sm"
+                        />
+                    ) : (
+                        <div className="mt-6 flex h-48 items-center justify-center rounded-xl bg-muted">
+                            <CalendarDays className="size-12 text-muted-foreground" />
+                        </div>
+                    )}
                 </div>
 
                 <div className="rounded-lg border p-6 shadow-sm">
