@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\EventController as AdminEventController;
 use App\Http\Controllers\Admin\EventRegistrationController as AdminEventRegistrationController;
 use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventRegistrationController;
 use Illuminate\Support\Facades\Route;
@@ -34,6 +35,15 @@ Route::middleware(['auth', 'admin'])
     ->name('admin.')
     ->group(function () {
         Route::inertia('/', 'admin/dashboard')->name('dashboard');
+
+        Route::get('/users', [UserController::class, 'index'])
+            ->name('users.index');
+
+        Route::put('/users/{user}', [UserController::class, 'update'])
+            ->name('users.update');
+
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])
+            ->name('users.destroy');
 
         Route::get('/categories', [CategoryController::class, 'index'])
             ->name('categories.index');
