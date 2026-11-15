@@ -1,5 +1,11 @@
 ﻿import { Head, Link } from '@inertiajs/react';
-import { CalendarDays, Tags, FolderOpen, ArrowRight } from 'lucide-react';
+import {
+    CalendarDays,
+    Tags,
+    FolderOpen,
+    ArrowRight,
+    Users,
+} from 'lucide-react';
 
 const adminSections = [
     {
@@ -20,6 +26,13 @@ const adminSections = [
         description: 'Upravljajte tagovima koji se mogu dodijeliti događajima.',
         href: '/admin/tags',
         icon: Tags,
+    },
+    {
+        title: 'Korisnici',
+        description:
+            'Pregledajte korisnike, uređujte njihove podatke i upravljajte ulogama.',
+        href: '/admin/users',
+        icon: Users,
     },
 ];
 
