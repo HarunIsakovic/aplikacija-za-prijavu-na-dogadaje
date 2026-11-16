@@ -3,12 +3,26 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 type Category = {
     id: number;
     name: string;
+};
+
+type PaginationLink = {
+    url: string | null;
+    label: string;
+    active: boolean;
+};
+
+type PaginatedCategories = {
+    data: Category[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    links: PaginationLink[];
 };
 
 type Flash = {
@@ -17,18 +31,37 @@ type Flash = {
 };
 
 type Props = {
-    categories: Category[];
+    categories: PaginatedCategories;
+    filters: {
+        search?: string;
+    };
     flash: Flash;
 };
 
-export default function Index({ categories, flash }: Props) {
+export default function Index({ categories, filters, flash }: Props) {
     const [editingCategory, setEditingCategory] = useState<Category | null>(
         null,
     );
+    const [search, setSearch] = useState(filters.search ?? '');
+
+    function applySearch(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        router.get(
+            '/admin/categories',
+            { search: search || undefined },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    }
 
     return (
         <>
             <Head title="Kategorije" />
+
             <div className="p-6">
                 <h1 className="text-2xl font-bold">Kategorije</h1>
 
@@ -106,14 +139,45 @@ export default function Index({ categories, flash }: Props) {
                     </Form>
                 )}
 
-                <div className="mt-6">
-                    {categories.length === 0 ? (
+                <form
+                    onSubmit={applySearch}
+                    className="mt-8 flex flex-wrap gap-2"
+                >
+                    <Input
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Pretraži kategorije..."
+                        className="max-w-md"
+                    />
+
+                    <Button type="submit">Pretraži</Button>
+
+                    {filters.search && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setSearch('');
+                                router.get('/admin/categories');
+                            }}
+                        >
+                            Poništi pretragu
+                        </Button>
+                    )}
+                </form>
+
+                <p className="mt-4 text-sm text-muted-foreground">
+                    Ukupno kategorija: {categories.total}
+                </p>
+
+                <div className="mt-4">
+                    {categories.data.length === 0 ? (
                         <p className="text-gray-600">
-                            Trenutno nema kategorija.
+                            Nema kategorija koje odgovaraju pretrazi.
                         </p>
                     ) : (
                         <ul className="space-y-2">
-                            {categories.map((category) => (
+                            {categories.data.map((category) => (
                                 <li
                                     key={category.id}
                                     className="flex items-center justify-between rounded-lg border p-4"
@@ -133,11 +197,11 @@ export default function Index({ categories, flash }: Props) {
 
                                         <Form
                                             {...destroy.form(category.id)}
-                                            onBefore={() => {
-                                                return window.confirm(
+                                            onBefore={() =>
+                                                window.confirm(
                                                     'Da li ste sigurni da želite obrisati ovu kategoriju?',
-                                                );
-                                            }}
+                                                )
+                                            }
                                         >
                                             <Button
                                                 type="submit"
@@ -152,6 +216,38 @@ export default function Index({ categories, flash }: Props) {
                         </ul>
                     )}
                 </div>
+
+                {categories.last_page > 1 && (
+                    <div className="mt-6 flex flex-wrap justify-center gap-2">
+                        {categories.links.map((link, index) => (
+                            <Button
+                                key={index}
+                                type="button"
+                                size="sm"
+                                variant={link.active ? 'default' : 'outline'}
+                                disabled={!link.url}
+                                onClick={() => {
+                                    if (link.url) {
+                                        router.get(
+                                            link.url,
+                                            {},
+                                            {
+                                                preserveState: true,
+                                                preserveScroll: true,
+                                            },
+                                        );
+                                    }
+                                }}
+                            >
+                                <span
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            </Button>
+                        ))}
+                    </div>
+                )}
             </div>
         </>
     );

@@ -1,4 +1,5 @@
 import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
 import { CalendarDays, MapPin, Users, Tag as TagIcon } from 'lucide-react';
 
 type Category = {
@@ -26,13 +27,29 @@ type EventData = {
     tags: Tag[];
 };
 
+type PaginationLink = {
+    url: string | null;
+    label: string;
+    active: boolean;
+};
+
+type PaginatedEvents = {
+    data: EventData[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    per_page: number;
+    links: PaginationLink[];
+};
+
 type Props = {
-    events: EventData[];
+    events: PaginatedEvents;
     categories: Category[];
     tags: Tag[];
     filters: {
-        category_id?: string;
-        tag_id?: string;
+        search?: string;
+        category_ids?: (string | number)[];
+        tag_ids?: (string | number)[];
     };
 };
 
@@ -42,18 +59,52 @@ export default function EventsIndex({
     tags,
     filters,
 }: Props) {
-    function applyFilters(categoryId: string, tagId: string) {
+    const [search, setSearch] = useState(filters.search ?? '');
+
+    const [selectedCategories, setSelectedCategories] = useState<string[]>(
+        (filters.category_ids ?? []).map(String),
+    );
+
+    const [selectedTags, setSelectedTags] = useState<string[]>(
+        (filters.tag_ids ?? []).map(String),
+    );
+
+    function applyFilters(
+        searchValue: string,
+        categoryIds: string[],
+        tagIds: string[],
+    ) {
         router.get(
             '/events',
             {
-                category_id: categoryId || undefined,
-                tag_id: tagId || undefined,
+                search: searchValue || undefined,
+                category_ids: categoryIds.length ? categoryIds : undefined,
+                tag_ids: tagIds.length ? tagIds : undefined,
             },
             {
                 preserveState: true,
                 preserveScroll: true,
+                replace: true,
             },
         );
+    }
+
+    function toggleCategory(categoryId: string) {
+        const updated = selectedCategories.includes(categoryId)
+            ? selectedCategories.filter((id) => id !== categoryId)
+            : [...selectedCategories, categoryId];
+
+        setSelectedCategories(updated);
+        applyFilters(search, updated, selectedTags);
+    }
+
+    function toggleTag(tagId: string) {
+        const updated = selectedTags.includes(tagId)
+            ? selectedTags.filter((id) => id !== tagId)
+            : [...selectedTags, tagId];
+
+        setSelectedTags(updated);
+        applyFilters(search, selectedCategories, updated);
     }
 
     function registerForEvent(eventId: number) {
@@ -70,6 +121,14 @@ export default function EventsIndex({
         router.delete(`/events/${eventId}/registrations`, {
             preserveScroll: true,
         });
+    }
+
+    function clearFilters() {
+        setSearch('');
+        setSelectedCategories([]);
+        setSelectedTags([]);
+
+        applyFilters('', [], []);
     }
 
     return (
@@ -91,85 +150,123 @@ export default function EventsIndex({
                     </p>
                 </div>
 
-                <div className="rounded-xl border bg-card p-5 shadow-sm">
-                    <h2 className="mb-4 text-lg font-semibold">
-                        Filtrirajte događaje
-                    </h2>
+                <div className="space-y-5 rounded-xl border bg-card p-5 shadow-sm">
+                    <div>
+                        <h2 className="mb-3 text-lg font-semibold">
+                            Pretražite događaje
+                        </h2>
 
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <div>
-                            <label
-                                htmlFor="category"
-                                className="mb-2 block text-sm font-medium"
-                            >
-                                Kategorija
-                            </label>
-
-                            <select
-                                id="category"
-                                value={filters.category_id ?? ''}
+                        <form
+                            onSubmit={(event) => {
+                                event.preventDefault();
+                                applyFilters(
+                                    search,
+                                    selectedCategories,
+                                    selectedTags,
+                                );
+                            }}
+                            className="flex flex-col gap-3 sm:flex-row"
+                        >
+                            <input
+                                type="search"
+                                value={search}
                                 onChange={(event) =>
-                                    applyFilters(
-                                        event.target.value,
-                                        filters.tag_id ?? '',
-                                    )
+                                    setSearch(event.target.value)
                                 }
-                                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            >
-                                <option value="">Sve kategorije</option>
+                                placeholder="Naziv, opis ili lokacija događaja..."
+                                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            />
 
+                            <button
+                                type="submit"
+                                className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                            >
+                                Pretraži
+                            </button>
+                        </form>
+                    </div>
+
+                    <div className="grid gap-6 sm:grid-cols-2">
+                        <div>
+                            <h3 className="mb-3 text-sm font-semibold">
+                                Kategorije
+                            </h3>
+
+                            <div className="space-y-2">
                                 {categories.map((category) => (
-                                    <option
+                                    <label
                                         key={category.id}
-                                        value={category.id}
+                                        className="flex cursor-pointer items-center gap-2 text-sm"
                                     >
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedCategories.includes(
+                                                String(category.id),
+                                            )}
+                                            onChange={() =>
+                                                toggleCategory(
+                                                    String(category.id),
+                                                )
+                                            }
+                                            className="size-4 rounded border-input accent-primary"
+                                        />
+
                                         {category.name}
-                                    </option>
+                                    </label>
                                 ))}
-                            </select>
+                            </div>
                         </div>
 
                         <div>
-                            <label
-                                htmlFor="tag"
-                                className="mb-2 block text-sm font-medium"
-                            >
-                                Tag
-                            </label>
+                            <h3 className="mb-3 text-sm font-semibold">
+                                Tagovi
+                            </h3>
 
-                            <select
-                                id="tag"
-                                value={filters.tag_id ?? ''}
-                                onChange={(event) =>
-                                    applyFilters(
-                                        filters.category_id ?? '',
-                                        event.target.value,
-                                    )
-                                }
-                                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm transition-colors outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            >
-                                <option value="">Svi tagovi</option>
-
+                            <div className="space-y-2">
                                 {tags.map((tag) => (
-                                    <option key={tag.id} value={tag.id}>
+                                    <label
+                                        key={tag.id}
+                                        className="flex cursor-pointer items-center gap-2 text-sm"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedTags.includes(
+                                                String(tag.id),
+                                            )}
+                                            onChange={() =>
+                                                toggleTag(String(tag.id))
+                                            }
+                                            className="size-4 rounded border-input accent-primary"
+                                        />
+
                                         {tag.name}
-                                    </option>
+                                    </label>
                                 ))}
-                            </select>
+                            </div>
                         </div>
+                    </div>
+
+                    <div>
+                        <button
+                            type="button"
+                            onClick={clearFilters}
+                            className="text-sm font-medium text-primary hover:underline"
+                        >
+                            Poništi sve filtere
+                        </button>
                     </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                     <h2 className="text-xl font-semibold">Dostupni događaji</h2>
 
                     <span className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">
-                        {events.length}{' '}
-                        {events.length === 1 ? 'događaj' : 'događaja'}
+                        {events.total}{' '}
+                        {events.total === 1 ? 'događaj' : 'događaja'}
                     </span>
                 </div>
 
-                {events.length === 0 ? (
+                {events.data.length === 0 ? (
                     <div className="rounded-xl border border-dashed p-10 text-center">
                         <CalendarDays className="mx-auto mb-4 size-10 text-muted-foreground" />
 
@@ -178,13 +275,13 @@ export default function EventsIndex({
                         </h2>
 
                         <p className="mt-2 text-muted-foreground">
-                            Trenutno nema događaja koji odgovaraju odabranim
-                            filterima.
+                            Trenutno nema događaja koji odgovaraju vašoj
+                            pretrazi i odabranim filterima.
                         </p>
                     </div>
                 ) : (
                     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                        {events.map((event) => {
+                        {events.data.map((event) => {
                             const availableSeats =
                                 event.capacity - event.registered_count;
 
@@ -204,6 +301,7 @@ export default function EventsIndex({
                                             <CalendarDays className="size-12 text-muted-foreground" />
                                         </div>
                                     )}
+
                                     <div className="mb-3 flex items-start justify-between gap-3">
                                         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                                             {event.category.name}
@@ -230,13 +328,11 @@ export default function EventsIndex({
                                     <div className="my-5 space-y-3 border-y py-4 text-sm">
                                         <div className="flex items-start gap-3">
                                             <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-
                                             <span>{event.location}</span>
                                         </div>
 
                                         <div className="flex items-start gap-3">
                                             <CalendarDays className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-
                                             <span>
                                                 {new Date(
                                                     event.starts_at,
@@ -246,7 +342,6 @@ export default function EventsIndex({
 
                                         <div className="flex items-start gap-3">
                                             <Users className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-
                                             <span>
                                                 {event.registered_count} /{' '}
                                                 {event.capacity} prijavljenih
@@ -328,6 +423,47 @@ export default function EventsIndex({
                             );
                         })}
                     </div>
+                )}
+
+                {events.last_page > 1 && (
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                        {events.links.map((link, index) => (
+                            <button
+                                key={index}
+                                type="button"
+                                disabled={!link.url}
+                                onClick={() => {
+                                    if (link.url) {
+                                        router.get(
+                                            link.url,
+                                            {},
+                                            {
+                                                preserveState: true,
+                                                preserveScroll: true,
+                                            },
+                                        );
+                                    }
+                                }}
+                                className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                                    link.active
+                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        : 'bg-background hover:bg-muted'
+                                } disabled:cursor-not-allowed disabled:opacity-40`}
+                            >
+                                {link.label
+                                    .replace('&laquo;', '«')
+                                    .replace('&raquo;', '»')}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {events.total > 0 && (
+                    <p className="text-center text-sm text-muted-foreground">
+                        Prikazano {events.data.length} od ukupno {events.total}{' '}
+                        događaja. Stranica {events.current_page} od{' '}
+                        {events.last_page}.
+                    </p>
                 )}
             </div>
         </>

@@ -18,7 +18,9 @@ test('admin moze vidjeti listu korisnika', function () {
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('admin/users/index')
-            ->has('users', 4)
+            ->has('users.data', 4)
+            ->where('users.total', 4)
+            ->where('users.per_page', 10)
         );
 });
 
@@ -122,4 +124,31 @@ test('brisanje korisnika koristi soft delete', function () {
     $this->assertSoftDeleted('users', [
         'id' => $user->id,
     ]);
+});
+
+test('admin moze pretrazivati korisnike po imenu i emailu', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+        'name' => 'Administrator',
+        'email' => 'admin@example.com',
+    ]);
+
+    User::factory()->create([
+        'name' => 'Korisnik Laravel',
+        'email' => 'laravel@example.com',
+    ]);
+
+    User::factory()->create([
+        'name' => 'Korisnik React',
+        'email' => 'react@example.com',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.users.index', ['search' => 'laravel@example.com']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('users.data', 1)
+            ->where('users.data.0.email', 'laravel@example.com')
+            ->where('users.total', 1)
+        );
 });

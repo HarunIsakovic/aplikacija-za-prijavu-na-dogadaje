@@ -160,8 +160,9 @@ test('korisnik moze vidjeti svoje prijave', function () {
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('registrations/index')
-        ->has('registrations', 1)
-        ->where('registrations.0.id', $registration->id)
+        ->has('registrations.data', 1)
+        ->where('registrations.data.0.id', $registration->id)
+        ->where('registrations.total', 1)
     );
 });
 
@@ -179,6 +180,46 @@ test('korisnik ne moze vidjeti prijave drugih korisnika', function () {
 
     $response->assertInertia(fn (Assert $page) => $page
         ->component('registrations/index')
-        ->has('registrations', 0)
+        ->has('registrations.data', 0)
+        ->where('registrations.total', 0)
     );
+});
+
+test('korisnik moze pretrazivati svoje prijave po nazivu dogadaja', function () {
+    $secondCategory = Category::create([
+        'name' => 'Konferencija',
+    ]);
+
+    $secondEvent = Event::create([
+        'category_id' => $secondCategory->id,
+        'title' => 'React konferencija',
+        'description' => 'Opis konferencije.',
+        'location' => 'Sarajevo',
+        'starts_at' => now()->addDays(10),
+        'ends_at' => null,
+        'capacity' => 50,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    EventRegistration::create([
+        'user_id' => $this->user->id,
+        'event_id' => $this->event->id,
+        'status' => 'registered',
+    ]);
+
+    EventRegistration::create([
+        'user_id' => $this->user->id,
+        'event_id' => $secondEvent->id,
+        'status' => 'registered',
+    ]);
+
+    $this->actingAs($this->user)
+        ->get(route('registrations.index', ['search' => 'React']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('registrations.data', 1)
+            ->where('registrations.data.0.event.title', 'React konferencija')
+            ->where('registrations.total', 1)
+        );
 });

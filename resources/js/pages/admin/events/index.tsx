@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
-import { Form, Head, Link } from '@inertiajs/react';
+import { Input } from '@/components/ui/input';
+import { Form, Head, Link, router } from '@inertiajs/react';
 import { create, destroy, edit } from '@/routes/admin/events';
+import { useState } from 'react';
 
 type Category = {
     id: number;
@@ -20,17 +22,50 @@ type EventData = {
     category: Category;
 };
 
+type PaginationLink = {
+    url: string | null;
+    label: string;
+    active: boolean;
+};
+
+type PaginatedEvents = {
+    data: EventData[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    links: PaginationLink[];
+};
+
 type Flash = {
     success?: string | null;
     error?: string | null;
 };
 
 type Props = {
-    events: EventData[];
+    events: PaginatedEvents;
+    filters: {
+        search?: string;
+    };
     flash: Flash;
 };
 
-export default function Index({ events, flash }: Props) {
+export default function Index({ events, filters, flash }: Props) {
+    const [search, setSearch] = useState(filters.search ?? '');
+
+    function applySearch(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        router.get(
+            '/admin/events',
+            { search: search || undefined },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    }
+
     return (
         <>
             <Head title="Događaji" />
@@ -54,12 +89,45 @@ export default function Index({ events, flash }: Props) {
                     <p className="mt-4 text-sm text-red-600">{flash.error}</p>
                 )}
 
+                <form
+                    onSubmit={applySearch}
+                    className="mt-6 flex flex-wrap gap-2"
+                >
+                    <Input
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        placeholder="Pretraži događaje..."
+                        className="max-w-md"
+                    />
+
+                    <Button type="submit">Pretraži</Button>
+
+                    {filters.search && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setSearch('');
+                                router.get('/admin/events');
+                            }}
+                        >
+                            Poništi pretragu
+                        </Button>
+                    )}
+                </form>
+
+                <div className="mt-4 text-sm text-muted-foreground">
+                    Ukupno pronađenih događaja: {events.total}
+                </div>
+
                 <div className="mt-6">
-                    {events.length === 0 ? (
-                        <p className="text-gray-600">Trenutno nema događaja.</p>
+                    {events.data.length === 0 ? (
+                        <p className="text-gray-600">
+                            Nema događaja koji odgovaraju pretrazi.
+                        </p>
                     ) : (
                         <div className="space-y-4">
-                            {events.map((event) => (
+                            {events.data.map((event) => (
                                 <div
                                     key={event.id}
                                     className="flex flex-col justify-between gap-4 rounded-lg border p-4 sm:flex-row sm:items-center"
@@ -154,6 +222,38 @@ export default function Index({ events, flash }: Props) {
                         </div>
                     )}
                 </div>
+
+                {events.last_page > 1 && (
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                        {events.links.map((link, index) => (
+                            <Button
+                                key={index}
+                                type="button"
+                                variant={link.active ? 'default' : 'outline'}
+                                size="sm"
+                                disabled={!link.url}
+                                onClick={() => {
+                                    if (link.url) {
+                                        router.get(
+                                            link.url,
+                                            {},
+                                            {
+                                                preserveState: true,
+                                                preserveScroll: true,
+                                            },
+                                        );
+                                    }
+                                }}
+                            >
+                                <span
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            </Button>
+                        ))}
+                    </div>
+                )}
             </div>
         </>
     );

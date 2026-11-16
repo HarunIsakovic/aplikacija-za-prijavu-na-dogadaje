@@ -48,8 +48,11 @@ test('admin moze vidjeti prijavljene korisnike za dogadaj', function () {
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('admin/registrations/index')
-            ->has('registrations', 1)
-            ->where('registrations.0.user.id', $user->id)
+            ->has('registrations.data', 1)
+            ->where('registrations.data.0.user.id', $user->id)
+            ->where('registrations.total', 1)
+            ->where('activeRegistrations', 1)
+            ->where('attendedCount', 0)
         );
 });
 
@@ -138,4 +141,37 @@ test('admin ne moze evidentirati prisustvo za otkazanu prijavu', function () {
         'status' => 'cancelled',
         'attended' => false,
     ]);
+});
+
+test('admin moze pretrazivati prijavljene korisnike', function () {
+    $laravelUser = User::factory()->create([
+        'name' => 'Korisnik Laravel',
+        'email' => 'laravel@example.com',
+    ]);
+
+    $reactUser = User::factory()->create([
+        'name' => 'Korisnik React',
+        'email' => 'react@example.com',
+    ]);
+
+    foreach ([$laravelUser, $reactUser] as $user) {
+        EventRegistration::create([
+            'user_id' => $user->id,
+            'event_id' => $this->event->id,
+            'status' => 'registered',
+            'attended' => false,
+        ]);
+    }
+
+    $this->actingAs($this->admin)
+        ->get(route('admin.events.registrations.index', [
+            'event' => $this->event->id,
+            'search' => 'laravel@example.com',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('registrations.data', 1)
+            ->where('registrations.data.0.user.email', 'laravel@example.com')
+            ->where('registrations.total', 1)
+        );
 });

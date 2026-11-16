@@ -13,7 +13,13 @@ class EventController extends Controller
 {
     public function index(Request $request): Response
     {
-        $filters = $request->only(['category_id', 'tag_id']);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'category_ids' => ['sometimes', 'array'],
+            'category_ids.*' => ['integer', 'exists:categories,id'],
+            'tag_ids' => ['sometimes', 'array'],
+            'tag_ids.*' => ['integer', 'exists:tags,id'],
+        ]);
 
         $userId = $request->user()->id;
 
@@ -32,22 +38,34 @@ class EventController extends Controller
             ])
             ->where('status', 'published')
             ->where('starts_at', '>', now())
-            ->when($request->filled('category_id'), function ($query) use ($request) {
-                $query->where('category_id', $request->category_id);
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('title', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%");
+                });
             })
-            ->when($request->filled('tag_id'), function ($query) use ($request) {
-                $query->whereHas('tags', function ($tagQuery) use ($request) {
-                    $tagQuery->where('tags.id', $request->tag_id);
+            ->when(! empty($filters['category_ids'] ?? []), function ($query) use ($filters) {
+                $query->whereIn('category_id', $filters['category_ids']);
+            })
+            ->when(! empty($filters['tag_ids'] ?? []), function ($query) use ($filters) {
+                $query->whereHas('tags', function ($tagQuery) use ($filters) {
+                    $tagQuery->whereIn('tags.id', $filters['tag_ids']);
                 });
             })
             ->orderBy('starts_at')
-            ->get();
+            ->paginate(9)
+            ->withQueryString();
 
         return Inertia::render('events/index', [
             'events' => $events,
             'categories' => Category::orderBy('name')->get(),
             'tags' => Tag::orderBy('name')->get(),
-            'filters' => $filters,
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+                'category_ids' => $filters['category_ids'] ?? [],
+                'tag_ids' => $filters['tag_ids'] ?? [],
+            ],
         ]);
     }
 

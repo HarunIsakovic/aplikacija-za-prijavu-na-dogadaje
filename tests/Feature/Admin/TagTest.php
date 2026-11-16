@@ -21,7 +21,9 @@ test('admin moze vidjeti listu tagova', function () {
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('admin/tags/index')
-            ->has('tags', 1)
+            ->has('tags.data', 1)
+            ->where('tags.data.0.name', 'Laravel')
+            ->where('tags.total', 1)
         );
 });
 
@@ -106,4 +108,22 @@ test('nije moguce kreirati dva taga sa istim nazivom', function () {
         ->assertSessionHasErrors('name');
 
     expect(Tag::where('name', 'Laravel')->count())->toBe(1);
+});
+
+test('admin moze pretrazivati tagove po nazivu', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    Tag::create(['name' => 'Laravel']);
+    Tag::create(['name' => 'React']);
+
+    $this->actingAs($admin)
+        ->get(route('admin.tags.index', ['search' => 'Laravel']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('tags.data', 1)
+            ->where('tags.data.0.name', 'Laravel')
+            ->where('tags.total', 1)
+        );
 });

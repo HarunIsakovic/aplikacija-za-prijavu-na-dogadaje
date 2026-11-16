@@ -190,3 +190,21 @@ test('admin ne moze obrisati kategoriju koja ima povezane dogadjaje', function (
         'name' => 'Radionica',
     ]);
 });
+
+test('admin moze pretrazivati kategorije po nazivu', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    Category::create(['name' => 'Radionica']);
+    Category::create(['name' => 'Konferencija']);
+
+    $this->actingAs($admin)
+        ->get(route('admin.categories.index', ['search' => 'Radionica']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('categories.data', 1)
+            ->where('categories.data.0.name', 'Radionica')
+            ->where('categories.total', 1)
+        );
+});

@@ -13,16 +13,37 @@ use Inertia\Response;
 
 class EventRegistrationController extends Controller
 {
-    public function index(Event $event): Response
+    public function index(Request $request, Event $event): Response
     {
+        $filters = $request->only(['search']);
+
         $registrations = $event->registrations()
             ->with('user')
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->whereHas('user', function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('created_at')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
+
+        $activeRegistrations = $event->registrations()
+            ->where('status', 'registered')
+            ->count();
+
+        $attendedCount = $event->registrations()
+            ->where('status', 'registered')
+            ->where('attended', true)
+            ->count();
 
         return Inertia::render('admin/registrations/index', [
             'event' => $event,
             'registrations' => $registrations,
+            'filters' => $filters,
+            'activeRegistrations' => $activeRegistrations,
+            'attendedCount' => $attendedCount,
         ]);
     }
 
