@@ -3,7 +3,7 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, router } from '@inertiajs/react';
 import { useState } from 'react';
 
 type User = {
@@ -14,18 +14,50 @@ type User = {
     created_at: string;
 };
 
+type PaginationLink = {
+    url: string | null;
+    label: string;
+    active: boolean;
+};
+
+type PaginatedUsers = {
+    data: User[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    links: PaginationLink[];
+};
+
 type Flash = {
     success?: string | null;
     error?: string | null;
 };
 
 type Props = {
-    users: User[];
+    users: PaginatedUsers;
+    filters: {
+        search?: string;
+    };
     flash: Flash;
 };
 
-export default function Index({ users, flash }: Props) {
+export default function Index({ users, filters, flash }: Props) {
     const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [search, setSearch] = useState(filters.search ?? '');
+
+    function handleSearch(value: string) {
+        setSearch(value);
+
+        router.get(
+            '/admin/users',
+            { search: value || undefined },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    }
 
     return (
         <>
@@ -48,6 +80,19 @@ export default function Index({ users, flash }: Props) {
                     <p className="mt-4 text-sm text-red-600">{flash.error}</p>
                 )}
 
+                <div className="mt-6 max-w-md">
+                    <Input
+                        type="search"
+                        placeholder="Pretraži korisnike po imenu ili emailu..."
+                        value={search}
+                        onChange={(event) => handleSearch(event.target.value)}
+                    />
+                </div>
+
+                <p className="mt-4 text-sm text-muted-foreground">
+                    Ukupno korisnika: {users.total}
+                </p>
+
                 {editingUser && (
                     <Form
                         {...update.form(editingUser.id)}
@@ -62,20 +107,17 @@ export default function Index({ users, flash }: Props) {
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="edit-name">Ime</Label>
-
                                     <Input
                                         id="edit-name"
                                         name="name"
                                         defaultValue={editingUser.name}
                                         required
                                     />
-
                                     <InputError message={errors.name} />
                                 </div>
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="edit-email">Email</Label>
-
                                     <Input
                                         id="edit-email"
                                         name="email"
@@ -83,13 +125,11 @@ export default function Index({ users, flash }: Props) {
                                         defaultValue={editingUser.email}
                                         required
                                     />
-
                                     <InputError message={errors.email} />
                                 </div>
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="edit-role">Uloga</Label>
-
                                     <select
                                         id="edit-role"
                                         name="role"
@@ -101,7 +141,6 @@ export default function Index({ users, flash }: Props) {
                                             Administrator
                                         </option>
                                     </select>
-
                                     <InputError message={errors.role} />
                                 </div>
 
@@ -124,9 +163,9 @@ export default function Index({ users, flash }: Props) {
                 )}
 
                 <div className="mt-6 overflow-x-auto rounded-lg border">
-                    {users.length === 0 ? (
+                    {users.data.length === 0 ? (
                         <p className="p-4 text-gray-600">
-                            Trenutno nema registrovanih korisnika.
+                            Nema korisnika koji odgovaraju pretrazi.
                         </p>
                     ) : (
                         <table className="w-full text-left text-sm">
@@ -141,7 +180,7 @@ export default function Index({ users, flash }: Props) {
                             </thead>
 
                             <tbody>
-                                {users.map((user) => (
+                                {users.data.map((user) => (
                                     <tr
                                         key={user.id}
                                         className="border-b last:border-0"
@@ -149,21 +188,17 @@ export default function Index({ users, flash }: Props) {
                                         <td className="p-4 font-medium">
                                             {user.name}
                                         </td>
-
                                         <td className="p-4">{user.email}</td>
-
                                         <td className="p-4">
                                             {user.role === 'admin'
                                                 ? 'Administrator'
                                                 : 'Korisnik'}
                                         </td>
-
                                         <td className="p-4">
                                             {new Date(
                                                 user.created_at,
                                             ).toLocaleDateString('bs-BA')}
                                         </td>
-
                                         <td className="p-4">
                                             <div className="flex gap-2">
                                                 <Button
@@ -199,6 +234,37 @@ export default function Index({ users, flash }: Props) {
                         </table>
                     )}
                 </div>
+
+                {users.last_page > 1 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {users.links.map((link, index) => (
+                            <Button
+                                key={index}
+                                type="button"
+                                variant={link.active ? 'default' : 'outline'}
+                                disabled={!link.url}
+                                onClick={() => {
+                                    if (link.url) {
+                                        router.get(
+                                            link.url,
+                                            {},
+                                            {
+                                                preserveState: true,
+                                                preserveScroll: true,
+                                            },
+                                        );
+                                    }
+                                }}
+                            >
+                                <span
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            </Button>
+                        ))}
+                    </div>
+                )}
             </div>
         </>
     );

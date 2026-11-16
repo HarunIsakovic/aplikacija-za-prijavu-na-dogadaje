@@ -14,14 +14,23 @@ class EventRegistrationController extends Controller
 {
     public function index(Request $request): Response
     {
+        $filters = $request->only(['search']);
+
         $registrations = $request->user()
             ->eventRegistrations()
             ->with(['event.category'])
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->whereHas('event', function ($query) use ($search) {
+                    $query->where('title', 'like', "%{$search}%");
+                });
+            })
             ->latest()
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('registrations/index', [
             'registrations' => $registrations,
+            'filters' => $filters,
         ]);
     }
 

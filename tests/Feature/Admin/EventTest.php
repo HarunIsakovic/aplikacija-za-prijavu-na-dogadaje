@@ -35,7 +35,9 @@ test('admin moze vidjeti listu dogadaja', function () {
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('admin/events/index')
-            ->has('events', 1)
+            ->has('events.data', 1)
+            ->where('events.data.0.title', 'Testni događaj')
+            ->where('events.total', 1)
         );
 });
 

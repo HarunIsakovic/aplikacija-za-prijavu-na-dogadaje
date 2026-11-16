@@ -11,14 +11,21 @@ use Inertia\Response;
 
 class TagController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $filters = $request->only(['search']);
+
         $tags = Tag::query()
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
             ->orderBy('name')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('admin/tags/index', [
             'tags' => $tags,
+            'filters' => $filters,
         ]);
     }
 

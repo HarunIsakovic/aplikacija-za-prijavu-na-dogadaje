@@ -56,9 +56,11 @@ test('korisnik moze vidjeti objavljene buduce dogadaje', function () {
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('events/index')
-            ->has('events', 1)
-            ->where('events.0.id', $publishedEvent->id)
-            ->where('events.0.title', 'Laravel radionica')
+            ->has('events.data', 1)
+            ->where('events.data.0.id', $publishedEvent->id)
+            ->where('events.data.0.title', 'Laravel radionica')
+            ->where('events.total', 1)
+            ->where('events.per_page', 9)
         );
 });
 
@@ -104,13 +106,14 @@ test('korisnik moze filtrirati dogadaje po kategoriji', function () {
     ]);
 
     $response = $this->actingAs($user)->get(route('events.index', [
-        'category_id' => $workshop->id,
+        'category_ids' => [$workshop->id],
     ]));
 
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->has('events', 1)
-            ->where('events.0.id', $workshopEvent->id)
+            ->has('events.data', 1)
+            ->where('events.data.0.id', $workshopEvent->id)
+            ->where('events.total', 1)
         );
 });
 
@@ -157,13 +160,14 @@ test('korisnik moze filtrirati dogadaje po tagu', function () {
     $freeEvent->tags()->attach($freeTag);
 
     $response = $this->actingAs($user)->get(route('events.index', [
-        'tag_id' => $onlineTag->id,
+        'tag_ids' => [$onlineTag->id],
     ]));
 
     $response->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->has('events', 1)
-            ->where('events.0.id', $onlineEvent->id)
+            ->has('events.data', 1)
+            ->where('events.data.0.id', $onlineEvent->id)
+            ->where('events.total', 1)
         );
 });
 
@@ -271,4 +275,148 @@ test('neprijavljeni korisnik ne moze vidjeti detalje dogadaja', function () {
 
     $this->get(route('events.show', $event))
         ->assertRedirect(route('login'));
+});
+
+test('korisnik moze pretrazivati dogadaje po nazivu', function () {
+    $category = Category::create([
+        'name' => 'Radionica',
+    ]);
+
+    Event::create([
+        'category_id' => $category->id,
+        'title' => 'Laravel radionica',
+        'description' => 'Ucenje Laravela.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(7),
+        'ends_at' => null,
+        'capacity' => 30,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    Event::create([
+        'category_id' => $category->id,
+        'title' => 'React konferencija',
+        'description' => 'Ucenje Reacta.',
+        'location' => 'Sarajevo',
+        'starts_at' => now()->addDays(10),
+        'ends_at' => null,
+        'capacity' => 50,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('events.index', ['search' => 'Laravel']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('events.data', 1)
+            ->where('events.data.0.title', 'Laravel radionica')
+            ->where('events.total', 1)
+        );
+});
+
+test('korisnik moze kombinovati vise filtera kategorija i tagova', function () {
+    $user = User::factory()->create();
+
+    $workshop = Category::create(['name' => 'Radionica']);
+    $conference = Category::create(['name' => 'Konferencija']);
+    $onlineTag = Tag::create(['name' => 'Online']);
+    $freeTag = Tag::create(['name' => 'Besplatno']);
+
+    $event1 = Event::create([
+        'category_id' => $workshop->id,
+        'title' => 'Laravel online radionica',
+        'description' => 'Opis događaja.',
+        'location' => 'Online',
+        'starts_at' => now()->addDays(7),
+        'ends_at' => null,
+        'capacity' => 30,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $event2 = Event::create([
+        'category_id' => $conference->id,
+        'title' => 'React konferencija',
+        'description' => 'Opis događaja.',
+        'location' => 'Sarajevo',
+        'starts_at' => now()->addDays(10),
+        'ends_at' => null,
+        'capacity' => 50,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $event3 = Event::create([
+        'category_id' => $workshop->id,
+        'title' => 'PHP radionica',
+        'description' => 'Opis događaja.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(12),
+        'ends_at' => null,
+        'capacity' => 20,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $event1->tags()->attach($onlineTag);
+    $event2->tags()->attach($freeTag);
+    $event3->tags()->attach($freeTag);
+
+    $this->actingAs($user)
+        ->get(route('events.index', [
+            'category_ids' => [$workshop->id, $conference->id],
+            'tag_ids' => [$onlineTag->id, $freeTag->id],
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('events.data', 3)
+            ->where('events.total', 3)
+        );
+});
+
+test('admin moze pretrazivati dogadaje po nazivu', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Radionica',
+    ]);
+
+    Event::create([
+        'category_id' => $category->id,
+        'title' => 'Laravel radionica',
+        'description' => 'Radionica o Laravelu.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(7),
+        'ends_at' => null,
+        'capacity' => 30,
+        'image' => null,
+        'status' => 'draft',
+    ]);
+
+    Event::create([
+        'category_id' => $category->id,
+        'title' => 'React konferencija',
+        'description' => 'Konferencija o Reactu.',
+        'location' => 'Sarajevo',
+        'starts_at' => now()->addDays(10),
+        'ends_at' => null,
+        'capacity' => 50,
+        'image' => null,
+        'status' => 'draft',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.events.index', [
+            'search' => 'Laravel',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('events.data', 1)
+            ->where('events.data.0.title', 'Laravel radionica')
+            ->where('events.total', 1)
+        );
 });

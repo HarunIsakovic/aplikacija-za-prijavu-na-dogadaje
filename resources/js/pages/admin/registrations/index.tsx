@@ -1,5 +1,8 @@
 import { Head, router } from '@inertiajs/react';
+import { useState } from 'react';
 import { CalendarDays, MapPin, Users, CheckCircle2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 type EventData = {
     id: number;
@@ -21,22 +24,52 @@ type Registration = {
     user: User;
 };
 
+type PaginationLink = {
+    url: string | null;
+    label: string;
+    active: boolean;
+};
+
+type PaginatedRegistrations = {
+    data: Registration[];
+    current_page: number;
+    last_page: number;
+    total: number;
+    links: PaginationLink[];
+};
+
 type Props = {
     event: EventData;
-    registrations: Registration[];
+    registrations: PaginatedRegistrations;
+    filters: {
+        search?: string;
+    };
+    activeRegistrations: number;
+    attendedCount: number;
 };
 
 export default function EventRegistrationsIndex({
     event,
     registrations,
+    filters,
+    activeRegistrations,
+    attendedCount,
 }: Props) {
-    const activeRegistrations = registrations.filter(
-        (registration) => registration.status === 'registered',
-    );
+    const [search, setSearch] = useState(filters.search ?? '');
 
-    const attendedCount = activeRegistrations.filter(
-        (registration) => registration.attended,
-    ).length;
+    function handleSearch(value: string) {
+        setSearch(value);
+
+        router.get(
+            `/admin/events/${event.id}/registrations`,
+            { search: value || undefined },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    }
 
     function toggleAttendance(registration: Registration) {
         router.put(
@@ -102,7 +135,7 @@ export default function EventRegistrationsIndex({
                                 </p>
 
                                 <p className="text-2xl font-bold tabular-nums">
-                                    {activeRegistrations.length}
+                                    {activeRegistrations}
                                 </p>
                             </div>
                         </div>
@@ -128,18 +161,39 @@ export default function EventRegistrationsIndex({
                 </div>
 
                 <div className="space-y-4">
-                    <h2 className="text-xl font-semibold">Lista prijava</h2>
+                    <div>
+                        <h2 className="text-xl font-semibold">Lista prijava</h2>
 
-                    {registrations.length === 0 ? (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Ukupno prijava: {registrations.total}
+                        </p>
+                    </div>
+
+                    <div className="max-w-md">
+                        <Input
+                            type="search"
+                            placeholder="Pretraži po imenu ili emailu..."
+                            value={search}
+                            onChange={(event) =>
+                                handleSearch(event.target.value)
+                            }
+                        />
+                    </div>
+
+                    {registrations.data.length === 0 ? (
                         <div className="rounded-xl border border-dashed p-10 text-center">
                             <Users className="mx-auto mb-4 size-10 text-muted-foreground" />
 
                             <h3 className="text-lg font-semibold">
-                                Nema prijavljenih korisnika
+                                {search
+                                    ? 'Nema rezultata pretrage'
+                                    : 'Nema prijavljenih korisnika'}
                             </h3>
 
                             <p className="mt-2 text-muted-foreground">
-                                Na ovaj događaj se još niko nije prijavio.
+                                {search
+                                    ? 'Pokušajte pretražiti drugim pojmom.'
+                                    : 'Na ovaj događaj se još niko nije prijavio.'}
                             </p>
                         </div>
                     ) : (
@@ -170,7 +224,7 @@ export default function EventRegistrationsIndex({
                                 </thead>
 
                                 <tbody className="divide-y">
-                                    {registrations.map((registration) => (
+                                    {registrations.data.map((registration) => (
                                         <tr
                                             key={registration.id}
                                             className="transition-colors hover:bg-muted/30"
@@ -244,6 +298,39 @@ export default function EventRegistrationsIndex({
                                     ))}
                                 </tbody>
                             </table>
+                        </div>
+                    )}
+
+                    {registrations.last_page > 1 && (
+                        <div className="flex flex-wrap gap-2">
+                            {registrations.links.map((link, index) => (
+                                <Button
+                                    key={index}
+                                    type="button"
+                                    variant={
+                                        link.active ? 'default' : 'outline'
+                                    }
+                                    disabled={!link.url}
+                                    onClick={() => {
+                                        if (link.url) {
+                                            router.get(
+                                                link.url,
+                                                {},
+                                                {
+                                                    preserveState: true,
+                                                    preserveScroll: true,
+                                                },
+                                            );
+                                        }
+                                    }}
+                                >
+                                    <span
+                                        dangerouslySetInnerHTML={{
+                                            __html: link.label,
+                                        }}
+                                    />
+                                </Button>
+                            ))}
                         </div>
                     )}
                 </div>

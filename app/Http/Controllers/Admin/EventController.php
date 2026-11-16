@@ -14,15 +14,26 @@ use Inertia\Response;
 
 class EventController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $filters = $request->only(['search']);
+
         $events = Event::query()
             ->with('category')
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('title', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+            })
             ->orderBy('starts_at')
-            ->get();
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('admin/events/index', [
             'events' => $events,
+            'filters' => $filters,
         ]);
     }
 
