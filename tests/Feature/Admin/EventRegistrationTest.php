@@ -18,7 +18,6 @@ beforeEach(function () {
     ]);
 
     $this->event = Event::create([
-        'category_id' => $this->category->id,
         'title' => 'Testni događaj',
         'description' => 'Opis događaja.',
         'location' => 'Zenica',
@@ -28,6 +27,8 @@ beforeEach(function () {
         'image' => null,
         'status' => 'published',
     ]);
+
+    $this->event->categories()->attach($this->category->id);
 });
 
 test('admin moze vidjeti prijavljene korisnike za dogadaj', function () {

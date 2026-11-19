@@ -135,7 +135,7 @@ test('admin moze zadrzati postojeci naziv kategorije', function () {
     ]);
 });
 
-test('admin moze obrisati kategoriju bez povezanih dogadjaja', function () {
+test('admin moze obrisati kategoriju bez povezanih dogadaja', function () {
     $admin = User::factory()->create([
         'role' => 'admin',
     ]);
@@ -154,7 +154,7 @@ test('admin moze obrisati kategoriju bez povezanih dogadjaja', function () {
     ]);
 });
 
-test('admin ne moze obrisati kategoriju koja ima povezane dogadjaje', function () {
+test('admin ne moze obrisati kategoriju koja ima povezane dogadaje', function () {
     $admin = User::factory()->create([
         'role' => 'admin',
     ]);
@@ -163,8 +163,7 @@ test('admin ne moze obrisati kategoriju koja ima povezane dogadjaje', function (
         'name' => 'Radionica',
     ]);
 
-    Event::create([
-        'category_id' => $category->id,
+    $event = Event::create([
         'title' => 'Testni događaj',
         'description' => 'Opis testnog događaja.',
         'location' => 'Zenica',
@@ -174,6 +173,8 @@ test('admin ne moze obrisati kategoriju koja ima povezane dogadjaje', function (
         'image' => null,
         'status' => 'draft',
     ]);
+
+    $event->categories()->attach($category->id);
 
     $response = $this->actingAs($admin)
         ->delete(route('admin.categories.destroy', $category));

@@ -17,7 +17,6 @@ beforeEach(function () {
     ]);
 
     $this->event = Event::create([
-        'category_id' => $category->id,
         'title' => 'Laravel radionica',
         'description' => 'Ucenje Laravela.',
         'location' => 'Zenica',
@@ -27,6 +26,8 @@ beforeEach(function () {
         'image' => null,
         'status' => 'published',
     ]);
+
+    $this->event->categories()->attach($category);
 });
 
 test('korisnik se moze prijaviti na objavljeni dogadaj', function () {
@@ -191,7 +192,6 @@ test('korisnik moze pretrazivati svoje prijave po nazivu dogadaja', function () 
     ]);
 
     $secondEvent = Event::create([
-        'category_id' => $secondCategory->id,
         'title' => 'React konferencija',
         'description' => 'Opis konferencije.',
         'location' => 'Sarajevo',
@@ -201,6 +201,8 @@ test('korisnik moze pretrazivati svoje prijave po nazivu dogadaja', function () 
         'image' => null,
         'status' => 'published',
     ]);
+
+    $secondEvent->categories()->attach($secondCategory);
 
     EventRegistration::create([
         'user_id' => $this->user->id,

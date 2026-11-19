@@ -17,8 +17,7 @@ test('admin moze vidjeti listu dogadaja', function () {
         'name' => 'Radionica',
     ]);
 
-    Event::create([
-        'category_id' => $category->id,
+    $event = Event::create([
         'title' => 'Testni događaj',
         'description' => 'Opis testnog događaja.',
         'location' => 'Zenica',
@@ -28,6 +27,8 @@ test('admin moze vidjeti listu dogadaja', function () {
         'image' => null,
         'status' => 'draft',
     ]);
+
+    $event->categories()->attach($category->id);
 
     $response = $this->actingAs($admin)
         ->get(route('admin.events.index'));
@@ -63,7 +64,7 @@ test('admin moze kreirati dogadaj', function () {
 
     $response = $this->actingAs($admin)
         ->post(route('admin.events.store'), [
-            'category_id' => $category->id,
+            'categories' => [$category->id],
             'title' => 'Laravel konferencija',
             'description' => 'Konferencija o Laravelu.',
             'location' => 'Sarajevo',
@@ -75,8 +76,15 @@ test('admin moze kreirati dogadaj', function () {
 
     $response->assertRedirect(route('admin.events.index'));
 
-    $this->assertDatabaseHas('events', [
+    $event = Event::where('title', 'Laravel konferencija')->firstOrFail();
+
+    $this->assertDatabaseHas('category_event', [
+        'event_id' => $event->id,
         'category_id' => $category->id,
+    ]);
+
+    $this->assertDatabaseHas('events', [
+        'id' => $event->id,
         'title' => 'Laravel konferencija',
         'location' => 'Sarajevo',
         'capacity' => 50,
@@ -94,7 +102,6 @@ test('admin moze urediti dogadaj', function () {
     ]);
 
     $event = Event::create([
-        'category_id' => $category->id,
         'title' => 'Stari naziv',
         'description' => 'Stari opis.',
         'location' => 'Zenica',
@@ -105,9 +112,11 @@ test('admin moze urediti dogadaj', function () {
         'status' => 'draft',
     ]);
 
+    $event->categories()->attach($category->id);
+
     $response = $this->actingAs($admin)
         ->put(route('admin.events.update', $event), [
-            'category_id' => $category->id,
+            'categories' => [$category->id],
             'title' => 'Novi naziv',
             'description' => 'Novi opis.',
             'location' => 'Sarajevo',
@@ -118,6 +127,11 @@ test('admin moze urediti dogadaj', function () {
         ]);
 
     $response->assertRedirect(route('admin.events.index'));
+
+    $this->assertDatabaseHas('category_event', [
+        'event_id' => $event->id,
+        'category_id' => $category->id,
+    ]);
 
     $this->assertDatabaseHas('events', [
         'id' => $event->id,
@@ -139,7 +153,6 @@ test('admin moze obrisati dogadaj', function () {
     ]);
 
     $event = Event::create([
-        'category_id' => $category->id,
         'title' => 'Događaj za brisanje',
         'description' => 'Ovaj događaj će biti obrisan.',
         'location' => 'Zenica',
@@ -149,6 +162,8 @@ test('admin moze obrisati dogadaj', function () {
         'image' => null,
         'status' => 'draft',
     ]);
+
+    $event->categories()->attach($category->id);
 
     $response = $this->actingAs($admin)
         ->delete(route('admin.events.destroy', $event));
@@ -167,7 +182,7 @@ test('admin ne moze kreirati dogadaj sa neispravnim podacima', function () {
 
     $response = $this->actingAs($admin)
         ->post(route('admin.events.store'), [
-            'category_id' => 999,
+            'categories' => [],
             'title' => '',
             'description' => '',
             'location' => '',
@@ -178,7 +193,7 @@ test('admin ne moze kreirati dogadaj sa neispravnim podacima', function () {
         ]);
 
     $response->assertSessionHasErrors([
-        'category_id',
+        'categories',
         'title',
         'description',
         'location',
@@ -201,7 +216,7 @@ test('admin ne moze kreirati dogadaj gdje je datum zavrsetka prije datuma pocetk
 
     $response = $this->actingAs($admin)
         ->post(route('admin.events.store'), [
-            'category_id' => $category->id,
+            'categories' => [$category->id],
             'title' => 'Testni seminar',
             'description' => 'Opis seminara.',
             'location' => 'Zenica',
@@ -227,7 +242,7 @@ test('admin ne moze kreirati dogadaj sa neispravnom slikom', function () {
 
     $response = $this->actingAs($admin)
         ->post(route('admin.events.store'), [
-            'category_id' => $category->id,
+            'categories' => [$category->id],
             'title' => 'Testni događaj',
             'description' => 'Opis događaja.',
             'location' => 'Zenica',
@@ -262,7 +277,7 @@ test('admin moze kreirati dogadaj sa vise tagova', function () {
 
     $response = $this->actingAs($admin)
         ->post(route('admin.events.store'), [
-            'category_id' => $category->id,
+            'categories' => [$category->id],
             'title' => 'Laravel radionica',
             'description' => 'Radionica za pocetnike.',
             'location' => 'Online',
@@ -276,6 +291,11 @@ test('admin moze kreirati dogadaj sa vise tagova', function () {
     $response->assertRedirect(route('admin.events.index'));
 
     $event = Event::where('title', 'Laravel radionica')->firstOrFail();
+
+    $this->assertDatabaseHas('category_event', [
+        'event_id' => $event->id,
+        'category_id' => $category->id,
+    ]);
 
     $this->assertDatabaseHas('event_tag', [
         'event_id' => $event->id,
@@ -312,7 +332,6 @@ test('admin moze urediti tagove dogadaja', function () {
     ]);
 
     $event = Event::create([
-        'category_id' => $category->id,
         'title' => 'Laravel radionica',
         'description' => 'Radionica za pocetnike.',
         'location' => 'Online',
@@ -323,11 +342,12 @@ test('admin moze urediti tagove dogadaja', function () {
         'status' => 'published',
     ]);
 
+    $event->categories()->attach($category->id);
     $event->tags()->sync([$tag1->id, $tag2->id]);
 
     $response = $this->actingAs($admin)
         ->put(route('admin.events.update', $event), [
-            'category_id' => $category->id,
+            'categories' => [$category->id],
             'title' => 'Laravel radionica',
             'description' => 'Radionica za pocetnike.',
             'location' => 'Online',
@@ -369,7 +389,6 @@ test('admin moze sakriti objavljeni dogadaj', function () {
     ]);
 
     $event = Event::create([
-        'category_id' => $category->id,
         'title' => 'Objavljena radionica',
         'description' => 'Opis radionice.',
         'location' => 'Zenica',
@@ -380,9 +399,11 @@ test('admin moze sakriti objavljeni dogadaj', function () {
         'status' => 'published',
     ]);
 
+    $event->categories()->attach($category->id);
+
     $response = $this->actingAs($admin)
         ->put(route('admin.events.update', $event), [
-            'category_id' => $category->id,
+            'categories' => [$category->id],
             'title' => 'Objavljena radionica',
             'description' => 'Opis radionice.',
             'location' => 'Zenica',
@@ -398,4 +419,124 @@ test('admin moze sakriti objavljeni dogadaj', function () {
         'id' => $event->id,
         'status' => 'draft',
     ]);
+});
+
+test('admin moze duplicirati dogadaj kao nacrt', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Radionica',
+    ]);
+
+    $tag = Tag::create([
+        'name' => 'Besplatno',
+    ]);
+
+    $event = Event::create([
+        'title' => 'Laravel radionica',
+        'description' => 'Opis radionice.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(7),
+        'ends_at' => now()->addDays(8),
+        'capacity' => 30,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $event->categories()->attach($category->id);
+    $event->tags()->attach($tag->id);
+
+    $response = $this->actingAs($admin)
+        ->post(route('admin.events.duplicate', $event));
+
+    $copy = Event::where('title', 'Laravel radionica (kopija)')
+        ->firstOrFail();
+
+    $response->assertRedirect(route('admin.events.edit', $copy));
+
+    $this->assertDatabaseHas('events', [
+        'id' => $copy->id,
+        'title' => 'Laravel radionica (kopija)',
+        'description' => 'Opis radionice.',
+        'location' => 'Zenica',
+        'capacity' => 30,
+        'status' => 'draft',
+    ]);
+
+    expect($copy->id)->not->toBe($event->id);
+});
+
+test('duplicirani dogadaj zadrzava kategorije i tagove', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $category1 = Category::create([
+        'name' => 'Radionica',
+    ]);
+
+    $category2 = Category::create([
+        'name' => 'Edukacija',
+    ]);
+
+    $tag1 = Tag::create([
+        'name' => 'Besplatno',
+    ]);
+
+    $tag2 = Tag::create([
+        'name' => 'Online',
+    ]);
+
+    $event = Event::create([
+        'title' => 'Laravel radionica',
+        'description' => 'Opis radionice.',
+        'location' => 'Online',
+        'starts_at' => now()->addDays(7),
+        'ends_at' => null,
+        'capacity' => 30,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $event->categories()->sync([$category1->id, $category2->id]);
+    $event->tags()->sync([$tag1->id, $tag2->id]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.events.duplicate', $event))
+        ->assertRedirect();
+
+    $copy = Event::where('title', 'Laravel radionica (kopija)')
+        ->firstOrFail();
+
+    expect($copy->categories->modelKeys())
+        ->toEqualCanonicalizing([$category1->id, $category2->id]);
+
+    expect($copy->tags->modelKeys())
+        ->toEqualCanonicalizing([$tag1->id, $tag2->id]);
+});
+
+test('obicni korisnik ne moze duplicirati dogadaj', function () {
+    $user = User::factory()->create([
+        'role' => 'user',
+    ]);
+
+    $event = Event::create([
+        'title' => 'Laravel radionica',
+        'description' => 'Opis radionice.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(7),
+        'ends_at' => null,
+        'capacity' => 30,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->post(route('admin.events.duplicate', $event));
+
+    $response->assertForbidden();
+
+    $this->assertDatabaseCount('events', 1);
 });

@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Category extends Model
 {
@@ -12,10 +12,10 @@ class Category extends Model
     ];
 
     /**
-     * @return HasMany<Event, $this>
+     * @return BelongsToMany<Event, $this>
      */
-    public function events(): HasMany
+    public function events(): BelongsToMany
     {
-        return $this->hasMany(Event::class);
+        return $this->belongsToMany(Event::class);
     }
 }

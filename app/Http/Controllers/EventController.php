@@ -21,21 +21,23 @@ class EventController extends Controller
             'tag_ids.*' => ['integer', 'exists:tags,id'],
         ]);
 
-        $userId = $request->user()->id;
+        $userId = $request->user()?->id;
 
-        $events = Event::query()
-            ->with(['category', 'tags'])
+        $eventsQuery = Event::query()
+            ->with(['categories', 'tags'])
             ->withCount([
                 'registrations as registered_count' => function ($query) {
                     $query->where('status', 'registered');
                 },
             ])
-            ->withExists([
-                'registrations as is_registered' => function ($query) use ($userId) {
-                    $query->where('user_id', $userId)
-                        ->where('status', 'registered');
-                },
-            ])
+            ->when($userId !== null, function ($query) use ($userId) {
+                $query->withExists([
+                    'registrations as is_registered' => function ($registrationQuery) use ($userId) {
+                        $registrationQuery->where('user_id', $userId)
+                            ->where('status', 'registered');
+                    },
+                ]);
+            })
             ->where('status', 'published')
             ->where('starts_at', '>', now())
             ->when($filters['search'] ?? null, function ($query, $search) {
@@ -46,14 +48,18 @@ class EventController extends Controller
                 });
             })
             ->when(! empty($filters['category_ids'] ?? []), function ($query) use ($filters) {
-                $query->whereIn('category_id', $filters['category_ids']);
+                $query->whereHas('categories', function ($categoryQuery) use ($filters) {
+                    $categoryQuery->whereIn('categories.id', $filters['category_ids']);
+                });
             })
             ->when(! empty($filters['tag_ids'] ?? []), function ($query) use ($filters) {
                 $query->whereHas('tags', function ($tagQuery) use ($filters) {
                     $tagQuery->whereIn('tags.id', $filters['tag_ids']);
                 });
             })
-            ->orderBy('starts_at')
+            ->orderBy('starts_at');
+
+        $events = $eventsQuery
             ->paginate(9)
             ->withQueryString();
 
@@ -61,6 +67,7 @@ class EventController extends Controller
             'events' => $events,
             'categories' => Category::orderBy('name')->get(),
             'tags' => Tag::orderBy('name')->get(),
+            'can_register' => $userId !== null,
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'category_ids' => $filters['category_ids'] ?? [],
@@ -69,29 +76,74 @@ class EventController extends Controller
         ]);
     }
 
-    public function show(Request $request, Event $event): Response
+    public function archive(Request $request): Response
     {
-        $userId = $request->user()->id;
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+        ]);
 
-        $event = Event::query()
-            ->with(['category', 'tags'])
+        $events = Event::query()
+            ->with(['categories', 'tags'])
             ->withCount([
                 'registrations as registered_count' => function ($query) {
                     $query->where('status', 'registered');
                 },
             ])
-            ->withExists([
+            ->where('status', 'expired')
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('title', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%")
+                        ->orWhere('location', 'like', "%{$search}%");
+                });
+            })
+            ->orderByDesc('starts_at')
+            ->paginate(9)
+            ->withQueryString();
+
+        return Inertia::render('events/archive', [
+            'events' => $events,
+            'filters' => [
+                'search' => $filters['search'] ?? '',
+            ],
+        ]);
+    }
+
+    public function show(Request $request, Event $event): Response
+    {
+        $userId = $request->user()?->id;
+
+        $isArchived = $event->status === 'expired';
+
+        abort_unless(
+            $isArchived || (
+                $event->status === 'published'
+                && $event->starts_at > now()
+            ),
+            404
+        );
+
+        $event->load(['categories', 'tags']);
+
+        $event->loadCount([
+            'registrations as registered_count' => function ($query) {
+                $query->where('status', 'registered');
+            },
+        ]);
+
+        if ($userId !== null && ! $isArchived) {
+            $event->loadExists([
                 'registrations as is_registered' => function ($query) use ($userId) {
                     $query->where('user_id', $userId)
                         ->where('status', 'registered');
                 },
-            ])
-            ->where('status', 'published')
-            ->where('starts_at', '>', now())
-            ->findOrFail($event->id);
+            ]);
+        }
 
         return Inertia::render('events/show', [
             'event' => $event,
+            'can_register' => $userId !== null && ! $isArchived,
+            'is_archived' => $isArchived,
         ]);
     }
 }

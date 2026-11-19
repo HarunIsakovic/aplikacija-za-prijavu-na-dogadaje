@@ -2,16 +2,18 @@ import { Head, router } from '@inertiajs/react';
 import { CalendarDays, MapPin, ClipboardList } from 'lucide-react';
 import { useState } from 'react';
 
+type Category = {
+    id: number;
+    name: string;
+};
+
 type EventData = {
     id: number;
     title: string;
     location: string;
     starts_at: string;
     ends_at: string | null;
-    category: {
-        id: number;
-        name: string;
-    };
+    categories: Category[];
 };
 
 type Registration = {
@@ -149,10 +151,13 @@ export default function RegistrationsIndex({ registrations, filters }: Props) {
                                         <div className="flex items-center gap-3">
                                             <ClipboardList className="size-4 shrink-0 text-muted-foreground" />
                                             <span>
-                                                {
-                                                    registration.event.category
-                                                        .name
-                                                }
+                                                {registration.event.categories
+                                                    .map(
+                                                        (category) =>
+                                                            category.name,
+                                                    )
+                                                    .join(', ') ||
+                                                    'Nema kategorija'}
                                             </span>
                                         </div>
 

@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 import { CalendarDays, MapPin, Users, Tag as TagIcon } from 'lucide-react';
 
@@ -14,6 +14,7 @@ type Tag = {
 
 type EventData = {
     id: number;
+    slug: string;
     image: string | null;
     title: string;
     description: string;
@@ -23,7 +24,7 @@ type EventData = {
     capacity: number;
     registered_count: number;
     is_registered: boolean;
-    category: Category;
+    categories: Category[];
     tags: Tag[];
 };
 
@@ -46,6 +47,7 @@ type Props = {
     events: PaginatedEvents;
     categories: Category[];
     tags: Tag[];
+    can_register: boolean;
     filters: {
         search?: string;
         category_ids?: (string | number)[];
@@ -57,6 +59,7 @@ export default function EventsIndex({
     events,
     categories,
     tags,
+    can_register,
     filters,
 }: Props) {
     const [search, setSearch] = useState(filters.search ?? '');
@@ -148,6 +151,14 @@ export default function EventsIndex({
                     <p className="mt-2 text-muted-foreground">
                         Pregledajte dostupne događaje i pronađite nešto za sebe.
                     </p>
+
+                    <Link
+                        href="/events/archive"
+                        className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                    >
+                        <CalendarDays className="size-4" />
+                        Pogledajte arhivu završenih događaja
+                    </Link>
                 </div>
 
                 <div className="space-y-5 rounded-xl border bg-card p-5 shadow-sm">
@@ -302,10 +313,19 @@ export default function EventsIndex({
                                         </div>
                                     )}
 
-                                    <div className="mb-3 flex items-start justify-between gap-3">
-                                        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                                            {event.category.name}
-                                        </span>
+                                    <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+                                        <div className="flex flex-wrap gap-2">
+                                            {event.categories.map(
+                                                (category) => (
+                                                    <span
+                                                        key={category.id}
+                                                        className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                                                    >
+                                                        {category.name}
+                                                    </span>
+                                                ),
+                                            )}
+                                        </div>
 
                                         {event.is_registered && (
                                             <span className="rounded-full bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600">
@@ -314,12 +334,12 @@ export default function EventsIndex({
                                         )}
                                     </div>
 
-                                    <a
-                                        href={`/events/${event.id}`}
+                                    <Link
+                                        href={`/events/${event.slug}`}
                                         className="text-xl font-semibold tracking-tight transition-colors hover:text-primary"
                                     >
                                         {event.title}
-                                    </a>
+                                    </Link>
 
                                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
                                         {event.description}
@@ -393,7 +413,14 @@ export default function EventsIndex({
                                     )}
 
                                     <div className="mt-auto">
-                                        {event.is_registered ? (
+                                        {!can_register ? (
+                                            <Link
+                                                href="/login"
+                                                className="block w-full rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                                            >
+                                                Prijavite se za učešće
+                                            </Link>
+                                        ) : event.is_registered ? (
                                             <button
                                                 type="button"
                                                 onClick={() =>

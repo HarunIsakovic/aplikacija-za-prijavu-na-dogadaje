@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { CalendarDays } from 'lucide-react';
 
 type Category = {
@@ -13,6 +13,7 @@ type Tag = {
 
 type EventData = {
     id: number;
+    slug: string;
     image: string | null;
     title: string;
     description: string;
@@ -21,16 +22,18 @@ type EventData = {
     ends_at: string | null;
     capacity: number;
     registered_count: number;
-    is_registered: boolean;
-    category: Category;
+    is_registered?: boolean;
+    categories: Category[];
     tags: Tag[];
 };
 
 type Props = {
     event: EventData;
+    can_register: boolean;
+    is_archived: boolean;
 };
 
-export default function EventShow({ event }: Props) {
+export default function EventShow({ event, can_register, is_archived }: Props) {
     const availableSeats = Math.max(0, event.capacity - event.registered_count);
 
     function registerForEvent() {
@@ -47,14 +50,27 @@ export default function EventShow({ event }: Props) {
 
             <div className="mx-auto max-w-4xl space-y-6 p-6">
                 <div>
-                    <a
-                        href="/events"
+                    <Link
+                        href={is_archived ? '/events/archive' : '/events'}
                         className="text-sm text-muted-foreground hover:underline"
                     >
-                        ← Nazad na događaje
-                    </a>
+                        ←{' '}
+                        {is_archived ? 'Nazad na arhivu' : 'Nazad na događaje'}
+                    </Link>
+
+                    {is_archived && (
+                        <div className="mt-4 rounded-lg border border-muted bg-muted/50 p-4">
+                            <p className="font-semibold">Događaj je završen</p>
+
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Ovaj događaj je završen. Prijave više nisu
+                                dostupne.
+                            </p>
+                        </div>
+                    )}
 
                     <h1 className="mt-4 text-3xl font-bold">{event.title}</h1>
+
                     {event.image ? (
                         <img
                             src={`/storage/${event.image}`}
@@ -81,7 +97,18 @@ export default function EventShow({ event }: Props) {
                         </div>
 
                         <div>
-                            <strong>Kategorija:</strong> {event.category.name}
+                            <strong>Kategorije:</strong>
+
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                {event.categories.map((category) => (
+                                    <span
+                                        key={category.id}
+                                        className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                                    >
+                                        {category.name}
+                                    </span>
+                                ))}
+                            </div>
                         </div>
 
                         <div>
@@ -112,9 +139,12 @@ export default function EventShow({ event }: Props) {
                             {event.registered_count}
                         </div>
 
-                        <div>
-                            <strong>Slobodna mjesta:</strong> {availableSeats}
-                        </div>
+                        {!is_archived && (
+                            <div>
+                                <strong>Slobodna mjesta:</strong>{' '}
+                                {availableSeats}
+                            </div>
+                        )}
 
                         {event.tags.length > 0 && (
                             <div>
@@ -134,29 +164,39 @@ export default function EventShow({ event }: Props) {
                         )}
                     </div>
 
-                    <div className="mt-6 border-t pt-6">
-                        {event.is_registered ? (
-                            <button
-                                type="button"
-                                onClick={cancelRegistration}
-                                className="w-full rounded-md border border-destructive px-4 py-3 font-medium text-destructive hover:bg-destructive/10"
-                            >
-                                Otkaži prijavu
-                            </button>
-                        ) : availableSeats > 0 ? (
-                            <button
-                                type="button"
-                                onClick={registerForEvent}
-                                className="w-full rounded-md bg-primary px-4 py-3 font-medium text-primary-foreground hover:bg-primary/90"
-                            >
-                                Prijavi se na događaj
-                            </button>
-                        ) : (
-                            <p className="rounded-md bg-muted p-3 text-center font-medium">
-                                Događaj je popunjen
-                            </p>
-                        )}
-                    </div>
+                    {!is_archived && (
+                        <div className="mt-6 border-t pt-6">
+                            {!can_register ? (
+                                <Link
+                                    href="/login"
+                                    className="block w-full rounded-md bg-primary px-4 py-3 text-center font-medium text-primary-foreground hover:bg-primary/90"
+                                >
+                                    Prijavite se da biste se prijavili na
+                                    događaj
+                                </Link>
+                            ) : event.is_registered ? (
+                                <button
+                                    type="button"
+                                    onClick={cancelRegistration}
+                                    className="w-full rounded-md border border-destructive px-4 py-3 font-medium text-destructive hover:bg-destructive/10"
+                                >
+                                    Otkaži prijavu
+                                </button>
+                            ) : availableSeats > 0 ? (
+                                <button
+                                    type="button"
+                                    onClick={registerForEvent}
+                                    className="w-full rounded-md bg-primary px-4 py-3 font-medium text-primary-foreground hover:bg-primary/90"
+                                >
+                                    Prijavi se na događaj
+                                </button>
+                            ) : (
+                                <p className="rounded-md bg-muted p-3 text-center font-medium">
+                                    Događaj je popunjen
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </>

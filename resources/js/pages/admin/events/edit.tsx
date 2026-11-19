@@ -13,7 +13,7 @@ type Tag = {
 
 type EventData = {
     id: number;
-    category_id: number;
+    categories: Category[];
     title: string;
     description: string;
     location: string;
