@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, Head, Link, router } from '@inertiajs/react';
-import { create, destroy, edit } from '@/routes/admin/events';
+import { create, destroy, duplicate, edit } from '@/routes/admin/events';
 import { useState } from 'react';
 
 type Category = {
@@ -18,8 +18,8 @@ type EventData = {
     ends_at: string | null;
     capacity: number;
     image: string | null;
-    status: 'draft' | 'published';
-    category: Category;
+    status: 'draft' | 'published' | 'expired';
+    categories: Category[];
 };
 
 type PaginationLink = {
@@ -147,8 +147,15 @@ export default function Index({ events, filters, flash }: Props) {
                                             </h2>
 
                                             <p className="text-sm text-muted-foreground">
-                                                Kategorija:{' '}
-                                                {event.category.name}
+                                                Kategorije:{' '}
+                                                {event.categories.length > 0
+                                                    ? event.categories
+                                                          .map(
+                                                              (category) =>
+                                                                  category.name,
+                                                          )
+                                                          .join(', ')
+                                                    : 'Nema kategorija'}
                                             </p>
 
                                             <p className="text-sm text-muted-foreground">
@@ -173,13 +180,19 @@ export default function Index({ events, filters, flash }: Props) {
                                                         event.status ===
                                                         'published'
                                                             ? 'font-medium text-green-600'
-                                                            : 'font-medium text-yellow-600'
+                                                            : event.status ===
+                                                                'expired'
+                                                              ? 'font-medium text-gray-500'
+                                                              : 'font-medium text-yellow-600'
                                                     }
                                                 >
                                                     {event.status ===
                                                     'published'
                                                         ? 'Objavljen'
-                                                        : 'Nacrt'}
+                                                        : event.status ===
+                                                            'expired'
+                                                          ? 'Završen'
+                                                          : 'Nacrt'}
                                                 </span>
                                             </p>
                                         </div>
@@ -199,6 +212,18 @@ export default function Index({ events, filters, flash }: Props) {
                                                 Uredi
                                             </Link>
                                         </Button>
+
+                                        <Form
+                                            action={duplicate.url(event.id)}
+                                            method="post"
+                                        >
+                                            <Button
+                                                type="submit"
+                                                variant="outline"
+                                            >
+                                                Dupliciraj
+                                            </Button>
+                                        </Form>
 
                                         <Form
                                             action={destroy.url(event.id)}

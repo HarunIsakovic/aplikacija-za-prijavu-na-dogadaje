@@ -19,7 +19,7 @@ class EventController extends Controller
         $filters = $request->only(['search']);
 
         $events = Event::query()
-            ->with('category')
+            ->with('categories')
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('title', 'like', "%{$search}%")
@@ -56,7 +56,8 @@ class EventController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'categories' => ['required', 'array', 'min:1'],
+            'categories.*' => ['required', 'integer', 'distinct', 'exists:categories,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'location' => ['required', 'string', 'max:255'],
@@ -73,12 +74,14 @@ class EventController extends Controller
             $validated['image'] = $request->file('image')->store('events', 'public');
         }
 
+        $categoryIds = $validated['categories'];
         $tagIds = $validated['tags'] ?? [];
 
-        unset($validated['tags']);
+        unset($validated['categories'], $validated['tags']);
 
         $event = Event::create($validated);
 
+        $event->categories()->sync($categoryIds);
         $event->tags()->sync($tagIds);
 
         return redirect()
@@ -96,7 +99,7 @@ class EventController extends Controller
             ->orderBy('name')
             ->get();
 
-        $event->load('tags');
+        $event->load(['categories', 'tags']);
 
         return Inertia::render('admin/events/edit', [
             'event' => $event,
@@ -108,7 +111,8 @@ class EventController extends Controller
     public function update(Request $request, Event $event): RedirectResponse
     {
         $validated = $request->validate([
-            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'categories' => ['required', 'array', 'min:1'],
+            'categories.*' => ['required', 'integer', 'distinct', 'exists:categories,id'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'location' => ['required', 'string', 'max:255'],
@@ -131,17 +135,51 @@ class EventController extends Controller
             unset($validated['image']);
         }
 
+        $categoryIds = $validated['categories'];
         $tagIds = $validated['tags'] ?? [];
 
-        unset($validated['tags']);
+        unset($validated['categories'], $validated['tags']);
 
         $event->update($validated);
 
+        $event->categories()->sync($categoryIds);
         $event->tags()->sync($tagIds);
 
         return redirect()
             ->route('admin.events.index')
             ->with('success', 'Događaj je uspješno ažuriran.');
+    }
+
+    public function duplicate(Event $event): RedirectResponse
+    {
+        $event->load(['categories', 'tags']);
+
+        $imagePath = null;
+
+        if ($event->image && Storage::disk('public')->exists($event->image)) {
+            $extension = pathinfo($event->image, PATHINFO_EXTENSION);
+            $imagePath = 'events/'.uniqid('event_copy_', true).'.'.$extension;
+
+            Storage::disk('public')->copy($event->image, $imagePath);
+        }
+
+        $copy = Event::create([
+            'title' => $event->title.' (kopija)',
+            'description' => $event->description,
+            'location' => $event->location,
+            'starts_at' => $event->starts_at,
+            'ends_at' => $event->ends_at,
+            'capacity' => $event->capacity,
+            'image' => $imagePath,
+            'status' => 'draft',
+        ]);
+
+        $copy->categories()->sync($event->categories->modelKeys());
+        $copy->tags()->sync($event->tags->modelKeys());
+
+        return redirect()
+            ->route('admin.events.edit', $copy)
+            ->with('success', 'Događaj je uspješno dupliciran. Kopija je sačuvana kao nacrt.');
     }
 
     public function destroy(Event $event): RedirectResponse

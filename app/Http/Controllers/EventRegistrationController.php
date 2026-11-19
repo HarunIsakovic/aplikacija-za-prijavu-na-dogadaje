@@ -18,7 +18,7 @@ class EventRegistrationController extends Controller
 
         $registrations = $request->user()
             ->eventRegistrations()
-            ->with(['event.category'])
+            ->with(['event.categories'])
             ->when($filters['search'] ?? null, function ($query, $search) {
                 $query->whereHas('event', function ($query) use ($search) {
                     $query->where('title', 'like', "%{$search}%");

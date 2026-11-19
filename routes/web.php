@@ -11,17 +11,23 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
+// Javni pregled događaja.
+Route::get('/events', [EventController::class, 'index'])
+    ->name('events.index');
+
+// Arhiva završenih događaja.
+Route::get('/events/archive', [EventController::class, 'archive'])
+    ->name('events.archive');
+
+// Javni detalji događaja preko slug-a.
+Route::get('/events/{event:slug}', [EventController::class, 'show'])
+    ->name('events.show');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
-    Route::get('/events', [EventController::class, 'index'])
-        ->name('events.index');
-
     Route::get('/my-registrations', [EventRegistrationController::class, 'index'])
         ->name('registrations.index');
-
-    Route::get('/events/{event}', [EventController::class, 'show'])
-        ->name('events.show');
 
     Route::post('/events/{event}/registrations', [EventRegistrationController::class, 'store'])
         ->name('events.registrations.store');
@@ -65,6 +71,9 @@ Route::middleware(['auth', 'admin'])
 
         Route::post('/events', [AdminEventController::class, 'store'])
             ->name('events.store');
+
+        Route::post('/events/{event}/duplicate', [AdminEventController::class, 'duplicate'])
+            ->name('events.duplicate');
 
         Route::get('/events/{event}/edit', [AdminEventController::class, 'edit'])
             ->name('events.edit');

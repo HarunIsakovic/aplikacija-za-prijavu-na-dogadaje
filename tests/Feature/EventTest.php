@@ -16,7 +16,6 @@ test('korisnik moze vidjeti objavljene buduce dogadaje', function () {
     ]);
 
     $publishedEvent = Event::create([
-        'category_id' => $category->id,
         'title' => 'Laravel radionica',
         'description' => 'Ucenje Laravela.',
         'location' => 'Zenica',
@@ -27,8 +26,9 @@ test('korisnik moze vidjeti objavljene buduce dogadaje', function () {
         'status' => 'published',
     ]);
 
-    Event::create([
-        'category_id' => $category->id,
+    $publishedEvent->categories()->attach($category);
+
+    $draftEvent = Event::create([
         'title' => 'Nacrt radionica',
         'description' => 'Neobjavljeni dogadaj.',
         'location' => 'Zenica',
@@ -39,8 +39,9 @@ test('korisnik moze vidjeti objavljene buduce dogadaje', function () {
         'status' => 'draft',
     ]);
 
-    Event::create([
-        'category_id' => $category->id,
+    $draftEvent->categories()->attach($category);
+
+    $pastEvent = Event::create([
         'title' => 'Prosli dogadaj',
         'description' => 'Dogadaj koji je vec poceo.',
         'location' => 'Zenica',
@@ -50,6 +51,8 @@ test('korisnik moze vidjeti objavljene buduce dogadaje', function () {
         'image' => null,
         'status' => 'published',
     ]);
+
+    $pastEvent->categories()->attach($category);
 
     $response = $this->actingAs($user)->get(route('events.index'));
 
@@ -64,10 +67,13 @@ test('korisnik moze vidjeti objavljene buduce dogadaje', function () {
         );
 });
 
-test('neprijavljeni korisnik ne moze pregledati dogadaje', function () {
+test('neprijavljeni korisnik moze pregledati dogadaje', function () {
     $response = $this->get(route('events.index'));
 
-    $response->assertRedirect(route('login'));
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('events/index')
+        );
 });
 
 test('korisnik moze filtrirati dogadaje po kategoriji', function () {
@@ -82,7 +88,6 @@ test('korisnik moze filtrirati dogadaje po kategoriji', function () {
     ]);
 
     $workshopEvent = Event::create([
-        'category_id' => $workshop->id,
         'title' => 'Laravel radionica',
         'description' => 'Opis radionice.',
         'location' => 'Zenica',
@@ -93,8 +98,9 @@ test('korisnik moze filtrirati dogadaje po kategoriji', function () {
         'status' => 'published',
     ]);
 
-    Event::create([
-        'category_id' => $conference->id,
+    $workshopEvent->categories()->attach($workshop);
+
+    $conferenceEvent = Event::create([
         'title' => 'PHP konferencija',
         'description' => 'Opis konferencije.',
         'location' => 'Sarajevo',
@@ -104,6 +110,8 @@ test('korisnik moze filtrirati dogadaje po kategoriji', function () {
         'image' => null,
         'status' => 'published',
     ]);
+
+    $conferenceEvent->categories()->attach($conference);
 
     $response = $this->actingAs($user)->get(route('events.index', [
         'category_ids' => [$workshop->id],
@@ -133,7 +141,6 @@ test('korisnik moze filtrirati dogadaje po tagu', function () {
     ]);
 
     $onlineEvent = Event::create([
-        'category_id' => $category->id,
         'title' => 'Online Laravel radionica',
         'description' => 'Radionica putem interneta.',
         'location' => 'Online',
@@ -144,8 +151,9 @@ test('korisnik moze filtrirati dogadaje po tagu', function () {
         'status' => 'published',
     ]);
 
+    $onlineEvent->categories()->attach($category);
+
     $freeEvent = Event::create([
-        'category_id' => $category->id,
         'title' => 'Besplatna PHP radionica',
         'description' => 'Besplatna radionica.',
         'location' => 'Zenica',
@@ -155,6 +163,8 @@ test('korisnik moze filtrirati dogadaje po tagu', function () {
         'image' => null,
         'status' => 'published',
     ]);
+
+    $freeEvent->categories()->attach($category);
 
     $onlineEvent->tags()->attach($onlineTag);
     $freeEvent->tags()->attach($freeTag);
@@ -179,7 +189,6 @@ test('korisnik moze vidjeti detalje objavljenog buduceg dogadaja', function () {
     ]);
 
     $event = Event::create([
-        'category_id' => $category->id,
         'title' => 'Laravel radionica',
         'description' => 'Detaljan opis radionice.',
         'location' => 'Zenica',
@@ -189,6 +198,8 @@ test('korisnik moze vidjeti detalje objavljenog buduceg dogadaja', function () {
         'image' => null,
         'status' => 'published',
     ]);
+
+    $event->categories()->attach($category);
 
     $event->registrations()->create([
         'user_id' => User::factory()->create()->id,
@@ -216,7 +227,6 @@ test('korisnik ne moze vidjeti detalje neobjavljenog dogadaja', function () {
     ]);
 
     $event = Event::create([
-        'category_id' => $category->id,
         'title' => 'Skrivena radionica',
         'description' => 'Neobjavljeni dogadaj.',
         'location' => 'Zenica',
@@ -226,6 +236,8 @@ test('korisnik ne moze vidjeti detalje neobjavljenog dogadaja', function () {
         'image' => null,
         'status' => 'draft',
     ]);
+
+    $event->categories()->attach($category);
 
     $this->actingAs($user)
         ->get(route('events.show', $event))
@@ -240,7 +252,6 @@ test('korisnik ne moze vidjeti detalje dogadaja koji je vec poceo', function () 
     ]);
 
     $event = Event::create([
-        'category_id' => $category->id,
         'title' => 'Prosla radionica',
         'description' => 'Dogadaj koji je vec poceo.',
         'location' => 'Zenica',
@@ -251,18 +262,19 @@ test('korisnik ne moze vidjeti detalje dogadaja koji je vec poceo', function () 
         'status' => 'published',
     ]);
 
+    $event->categories()->attach($category);
+
     $this->actingAs($user)
         ->get(route('events.show', $event))
         ->assertNotFound();
 });
 
-test('neprijavljeni korisnik ne moze vidjeti detalje dogadaja', function () {
+test('neprijavljeni korisnik moze vidjeti detalje objavljenog buduceg dogadaja', function () {
     $category = Category::create([
         'name' => 'Radionica',
     ]);
 
     $event = Event::create([
-        'category_id' => $category->id,
         'title' => 'Laravel radionica',
         'description' => 'Opis radionice.',
         'location' => 'Zenica',
@@ -273,8 +285,15 @@ test('neprijavljeni korisnik ne moze vidjeti detalje dogadaja', function () {
         'status' => 'published',
     ]);
 
+    $event->categories()->attach($category);
+
     $this->get(route('events.show', $event))
-        ->assertRedirect(route('login'));
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('events/show')
+            ->where('event.id', $event->id)
+            ->where('event.title', 'Laravel radionica')
+        );
 });
 
 test('korisnik moze pretrazivati dogadaje po nazivu', function () {
@@ -282,8 +301,7 @@ test('korisnik moze pretrazivati dogadaje po nazivu', function () {
         'name' => 'Radionica',
     ]);
 
-    Event::create([
-        'category_id' => $category->id,
+    $laravelEvent = Event::create([
         'title' => 'Laravel radionica',
         'description' => 'Ucenje Laravela.',
         'location' => 'Zenica',
@@ -294,8 +312,9 @@ test('korisnik moze pretrazivati dogadaje po nazivu', function () {
         'status' => 'published',
     ]);
 
-    Event::create([
-        'category_id' => $category->id,
+    $laravelEvent->categories()->attach($category);
+
+    $reactEvent = Event::create([
         'title' => 'React konferencija',
         'description' => 'Ucenje Reacta.',
         'location' => 'Sarajevo',
@@ -305,6 +324,8 @@ test('korisnik moze pretrazivati dogadaje po nazivu', function () {
         'image' => null,
         'status' => 'published',
     ]);
+
+    $reactEvent->categories()->attach($category);
 
     $this->actingAs(User::factory()->create())
         ->get(route('events.index', ['search' => 'Laravel']))
@@ -325,7 +346,6 @@ test('korisnik moze kombinovati vise filtera kategorija i tagova', function () {
     $freeTag = Tag::create(['name' => 'Besplatno']);
 
     $event1 = Event::create([
-        'category_id' => $workshop->id,
         'title' => 'Laravel online radionica',
         'description' => 'Opis događaja.',
         'location' => 'Online',
@@ -336,8 +356,9 @@ test('korisnik moze kombinovati vise filtera kategorija i tagova', function () {
         'status' => 'published',
     ]);
 
+    $event1->categories()->attach($workshop);
+
     $event2 = Event::create([
-        'category_id' => $conference->id,
         'title' => 'React konferencija',
         'description' => 'Opis događaja.',
         'location' => 'Sarajevo',
@@ -348,8 +369,9 @@ test('korisnik moze kombinovati vise filtera kategorija i tagova', function () {
         'status' => 'published',
     ]);
 
+    $event2->categories()->attach($conference);
+
     $event3 = Event::create([
-        'category_id' => $workshop->id,
         'title' => 'PHP radionica',
         'description' => 'Opis događaja.',
         'location' => 'Zenica',
@@ -359,6 +381,8 @@ test('korisnik moze kombinovati vise filtera kategorija i tagova', function () {
         'image' => null,
         'status' => 'published',
     ]);
+
+    $event3->categories()->attach($workshop);
 
     $event1->tags()->attach($onlineTag);
     $event2->tags()->attach($freeTag);
@@ -385,8 +409,7 @@ test('admin moze pretrazivati dogadaje po nazivu', function () {
         'name' => 'Radionica',
     ]);
 
-    Event::create([
-        'category_id' => $category->id,
+    $laravelEvent = Event::create([
         'title' => 'Laravel radionica',
         'description' => 'Radionica o Laravelu.',
         'location' => 'Zenica',
@@ -397,8 +420,9 @@ test('admin moze pretrazivati dogadaje po nazivu', function () {
         'status' => 'draft',
     ]);
 
-    Event::create([
-        'category_id' => $category->id,
+    $laravelEvent->categories()->attach($category);
+
+    $reactEvent = Event::create([
         'title' => 'React konferencija',
         'description' => 'Konferencija o Reactu.',
         'location' => 'Sarajevo',
@@ -409,6 +433,8 @@ test('admin moze pretrazivati dogadaje po nazivu', function () {
         'status' => 'draft',
     ]);
 
+    $reactEvent->categories()->attach($category);
+
     $this->actingAs($admin)
         ->get(route('admin.events.index', [
             'search' => 'Laravel',
@@ -418,5 +444,216 @@ test('admin moze pretrazivati dogadaje po nazivu', function () {
             ->has('events.data', 1)
             ->where('events.data.0.title', 'Laravel radionica')
             ->where('events.total', 1)
+        );
+});
+
+test('dogadaj automatski dobija slug na osnovu naziva', function () {
+    $event = Event::create([
+        'title' => 'Laravel radionica u Zenici',
+        'description' => 'Opis događaja.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(7),
+        'capacity' => 30,
+        'status' => 'published',
+    ]);
+
+    expect($event->slug)->toBe('laravel-radionica-u-zenici');
+});
+
+test('dogadaji sa istim nazivom dobijaju razlicite slugove', function () {
+    $firstEvent = Event::create([
+        'title' => 'Laravel radionica',
+        'description' => 'Prva radionica.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(7),
+        'capacity' => 30,
+        'status' => 'published',
+    ]);
+
+    $secondEvent = Event::create([
+        'title' => 'Laravel radionica',
+        'description' => 'Druga radionica.',
+        'location' => 'Sarajevo',
+        'starts_at' => now()->addDays(10),
+        'capacity' => 30,
+        'status' => 'published',
+    ]);
+
+    expect($firstEvent->slug)->toBe('laravel-radionica')
+        ->and($secondEvent->slug)->toBe('laravel-radionica-1');
+});
+
+test('slug dogadaja se mijenja kada se promijeni naziv', function () {
+    $event = Event::create([
+        'title' => 'Laravel radionica',
+        'description' => 'Opis događaja.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(7),
+        'capacity' => 30,
+        'status' => 'published',
+    ]);
+
+    $event->update([
+        'title' => 'React radionica',
+    ]);
+
+    expect($event->fresh()->slug)->toBe('react-radionica');
+});
+
+test('detalji dogadaja dostupni su preko slug URL-a', function () {
+    $event = Event::create([
+        'title' => 'Laravel radionica',
+        'description' => 'Opis događaja.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(7),
+        'capacity' => 30,
+        'status' => 'published',
+    ]);
+
+    $this->get(route('events.show', $event->slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('events/show')
+            ->where('event.id', $event->id)
+            ->where('event.slug', 'laravel-radionica')
+        );
+});
+
+test('arhiva prikazuje samo zavrsene dogadaje', function () {
+    $expiredEvent = Event::create([
+        'title' => 'Zavrsena Laravel radionica',
+        'description' => 'Zavrsen dogadaj.',
+        'location' => 'Zenica',
+        'starts_at' => now()->subDays(5),
+        'ends_at' => now()->subDays(4),
+        'capacity' => 30,
+        'status' => 'expired',
+    ]);
+
+    Event::create([
+        'title' => 'Buduca radionica',
+        'description' => 'Buduci dogadaj.',
+        'location' => 'Sarajevo',
+        'starts_at' => now()->addDays(5),
+        'ends_at' => now()->addDays(6),
+        'capacity' => 30,
+        'status' => 'published',
+    ]);
+
+    Event::create([
+        'title' => 'Nacrt dogadaja',
+        'description' => 'Neobjavljeni dogadaj.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(10),
+        'ends_at' => now()->addDays(11),
+        'capacity' => 30,
+        'status' => 'draft',
+    ]);
+
+    $this->get(route('events.archive'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('events/archive')
+            ->has('events.data', 1)
+            ->where('events.data.0.id', $expiredEvent->id)
+            ->where('events.data.0.title', 'Zavrsena Laravel radionica')
+            ->where('events.total', 1)
+        );
+});
+
+test('korisnik moze pretrazivati arhivu dogadaja', function () {
+    $laravelEvent = Event::create([
+        'title' => 'Laravel konferencija',
+        'description' => 'Konferencija o Laravelu.',
+        'location' => 'Zenica',
+        'starts_at' => now()->subDays(5),
+        'ends_at' => now()->subDays(4),
+        'capacity' => 30,
+        'status' => 'expired',
+    ]);
+
+    Event::create([
+        'title' => 'React konferencija',
+        'description' => 'Konferencija o Reactu.',
+        'location' => 'Sarajevo',
+        'starts_at' => now()->subDays(3),
+        'ends_at' => now()->subDays(2),
+        'capacity' => 30,
+        'status' => 'expired',
+    ]);
+
+    $this->get(route('events.archive', [
+        'search' => 'Laravel',
+    ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('events/archive')
+            ->has('events.data', 1)
+            ->where('events.data.0.id', $laravelEvent->id)
+            ->where('events.total', 1)
+        );
+});
+
+test('neprijavljeni korisnik moze vidjeti detalje zavrsenog dogadaja', function () {
+    $event = Event::create([
+        'title' => 'Zavrsena Laravel radionica',
+        'description' => 'Detalji zavrsene radionice.',
+        'location' => 'Zenica',
+        'starts_at' => now()->subDays(5),
+        'ends_at' => now()->subDays(4),
+        'capacity' => 30,
+        'status' => 'expired',
+    ]);
+
+    $this->get(route('events.show', $event->slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('events/show')
+            ->where('event.id', $event->id)
+            ->where('event.slug', $event->slug)
+            ->where('is_archived', true)
+            ->where('can_register', false)
+        );
+});
+
+test('zavrseni dogadaj nije dostupan za prijavu', function () {
+    $user = User::factory()->create();
+
+    $event = Event::create([
+        'title' => 'Zavrsena radionica',
+        'description' => 'Radionica koja je zavrsena.',
+        'location' => 'Zenica',
+        'starts_at' => now()->subDays(5),
+        'ends_at' => now()->subDays(4),
+        'capacity' => 30,
+        'status' => 'expired',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('events.show', $event->slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('is_archived', true)
+            ->where('can_register', false)
+        );
+});
+
+test('buduci objavljeni dogadaj nije oznacen kao arhiviran', function () {
+    $event = Event::create([
+        'title' => 'Buduca Laravel radionica',
+        'description' => 'Radionica koja tek dolazi.',
+        'location' => 'Zenica',
+        'starts_at' => now()->addDays(5),
+        'ends_at' => now()->addDays(6),
+        'capacity' => 30,
+        'status' => 'published',
+    ]);
+
+    $this->get(route('events.show', $event->slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('events/show')
+            ->where('event.id', $event->id)
+            ->where('is_archived', false)
         );
 });

@@ -3,14 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Event extends Model
 {
     protected $fillable = [
-        'category_id',
         'title',
         'description',
         'location',
@@ -21,12 +20,52 @@ class Event extends Model
         'status',
     ];
 
-    /**
-     * @return BelongsTo<Category, $this>
-     */
-    public function category(): BelongsTo
+    protected static function booted(): void
     {
-        return $this->belongsTo(Category::class);
+        static::creating(function (Event $event) {
+            $event->slug = static::generateUniqueSlug($event->title);
+        });
+
+        static::updating(function (Event $event) {
+            if ($event->isDirty('title')) {
+                $event->slug = static::generateUniqueSlug(
+                    $event->title,
+                    $event->id
+                );
+            }
+        });
+    }
+
+    protected static function generateUniqueSlug(string $title, ?int $ignoreId = null): string
+    {
+        $baseSlug = Str::slug($title);
+
+        if ($baseSlug === '') {
+            $baseSlug = 'dogadjaj';
+        }
+
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (
+            static::query()
+                ->where('slug', $slug)
+                ->when($ignoreId, fn ($query) => $query->where('id', '!=', $ignoreId))
+                ->exists()
+        ) {
+            $slug = $baseSlug.'-'.$counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
+
+    /**
+     * @return BelongsToMany<Category, $this>
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class);
     }
 
     /**

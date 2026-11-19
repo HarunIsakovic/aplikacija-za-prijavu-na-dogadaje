@@ -23,7 +23,7 @@ type Tag = {
 
 type EventData = {
     id: number;
-    category_id: number;
+    categories: Category[];
     title: string;
     description: string;
     location: string;
@@ -92,30 +92,46 @@ export default function EventForm({ categories, event, tags }: Props) {
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="category_id">Kategorija</Label>
-                        <Select
-                            name="category_id"
-                            defaultValue={
-                                event ? String(event.category_id) : undefined
-                            }
-                            required
-                        >
-                            <SelectTrigger id="category_id" className="w-full">
-                                <SelectValue placeholder="Odaberite kategoriju" />
-                            </SelectTrigger>
+                        <Label>Kategorije</Label>
 
-                            <SelectContent>
+                        {categories.length > 0 ? (
+                            <div className="grid gap-2">
                                 {categories.map((category) => (
-                                    <SelectItem
+                                    <div
                                         key={category.id}
-                                        value={String(category.id)}
+                                        className="flex items-center gap-2"
                                     >
-                                        {category.name}
-                                    </SelectItem>
+                                        <input
+                                            id={`category-${category.id}`}
+                                            type="checkbox"
+                                            name="categories[]"
+                                            value={category.id}
+                                            defaultChecked={
+                                                event?.categories.some(
+                                                    (eventCategory) =>
+                                                        eventCategory.id ===
+                                                        category.id,
+                                                ) ?? false
+                                            }
+                                            className="h-4 w-4 rounded border-input"
+                                        />
+
+                                        <Label
+                                            htmlFor={`category-${category.id}`}
+                                        >
+                                            {category.name}
+                                        </Label>
+                                    </div>
                                 ))}
-                            </SelectContent>
-                        </Select>
-                        <InputError message={errors.category_id} />
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                Trenutno nema dostupnih kategorija.
+                            </p>
+                        )}
+
+                        <InputError message={errors.categories} />
+                        <InputError message={errors['categories.0']} />
                     </div>
 
                     <div className="grid gap-2">
