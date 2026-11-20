@@ -12,7 +12,7 @@ export default function Welcome() {
                 <header className="border-b">
                     <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
                         <Link
-                            href={dashboard()}
+                            href="/"
                             className="text-xl font-bold tracking-tight"
                         >
                             Prijava na događaje
@@ -30,7 +30,7 @@ export default function Welcome() {
                                 <>
                                     <Link
                                         href={login()}
-                                        className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-muted"
+                                        className="rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-muted"
                                     >
                                         Prijava
                                     </Link>
@@ -67,31 +67,37 @@ export default function Welcome() {
                         </p>
 
                         <div className="mt-10 flex flex-wrap justify-center gap-4">
-                            {auth.user ? (
-                                <Link
-                                    href="/events"
-                                    className="rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"
-                                >
-                                    Pregledaj događaje
-                                </Link>
-                            ) : (
-                                <>
-                                    <Link
-                                        href={register()}
-                                        className="rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"
-                                    >
-                                        Započni sada
-                                    </Link>
+                            <Link
+                                href="/events"
+                                className="rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:opacity-90"
+                            >
+                                Pregledaj događaje
+                            </Link>
 
+                            {!auth.user && (
+                                <>
                                     <Link
                                         href={login()}
                                         className="rounded-lg border px-6 py-3 text-sm font-semibold hover:bg-muted"
                                     >
-                                        Već imam račun
+                                        Prijava
+                                    </Link>
+
+                                    <Link
+                                        href={register()}
+                                        className="rounded-lg border px-6 py-3 text-sm font-semibold hover:bg-muted"
+                                    >
+                                        Registracija
                                     </Link>
                                 </>
                             )}
                         </div>
+
+                        {!auth.user && (
+                            <p className="mt-5 text-sm text-muted-foreground">
+                                Događaje možete pregledati bez kreiranja računa.
+                            </p>
+                        )}
                     </div>
                 </main>
 

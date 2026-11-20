@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventRegistrationController;
+use App\Http\Controllers\FavoriteController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -23,9 +24,20 @@ Route::get('/events/archive', [EventController::class, 'archive'])
 Route::get('/events/{event:slug}', [EventController::class, 'show'])
     ->name('events.show');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
+    // Omiljeni događaji.
+    Route::get('/my-favorites', [FavoriteController::class, 'index'])
+        ->name('favorites.index');
+
+    Route::post('/events/{event}/favorite', [FavoriteController::class, 'store'])
+        ->name('events.favorites.store');
+
+    Route::delete('/events/{event}/favorite', [FavoriteController::class, 'destroy'])
+        ->name('events.favorites.destroy');
+
+    // Prijave na događaje.
     Route::get('/my-registrations', [EventRegistrationController::class, 'index'])
         ->name('registrations.index');
 

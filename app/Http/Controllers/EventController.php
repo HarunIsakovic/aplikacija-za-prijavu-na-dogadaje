@@ -22,6 +22,7 @@ class EventController extends Controller
         ]);
 
         $userId = $request->user()?->id;
+        $canFavorite = $userId !== null;
 
         $eventsQuery = Event::query()
             ->with(['categories', 'tags'])
@@ -35,6 +36,13 @@ class EventController extends Controller
                     'registrations as is_registered' => function ($registrationQuery) use ($userId) {
                         $registrationQuery->where('user_id', $userId)
                             ->where('status', 'registered');
+                    },
+                ]);
+            })
+            ->when($canFavorite, function ($query) use ($userId) {
+                $query->withExists([
+                    'favoritedBy as is_favorite' => function ($favoriteQuery) use ($userId) {
+                        $favoriteQuery->where('user_id', $userId);
                     },
                 ]);
             })
@@ -68,6 +76,7 @@ class EventController extends Controller
             'categories' => Category::orderBy('name')->get(),
             'tags' => Tag::orderBy('name')->get(),
             'can_register' => $userId !== null,
+            'can_favorite' => $canFavorite,
             'filters' => [
                 'search' => $filters['search'] ?? '',
                 'category_ids' => $filters['category_ids'] ?? [],
@@ -112,6 +121,7 @@ class EventController extends Controller
     public function show(Request $request, Event $event): Response
     {
         $userId = $request->user()?->id;
+        $canFavorite = $userId !== null;
 
         $isArchived = $event->status === 'expired';
 
@@ -140,9 +150,18 @@ class EventController extends Controller
             ]);
         }
 
+        if ($canFavorite && ! $isArchived) {
+            $event->loadExists([
+                'favoritedBy as is_favorite' => function ($query) use ($userId) {
+                    $query->where('user_id', $userId);
+                },
+            ]);
+        }
+
         return Inertia::render('events/show', [
             'event' => $event,
             'can_register' => $userId !== null && ! $isArchived,
+            'can_favorite' => $canFavorite && ! $isArchived,
             'is_archived' => $isArchived,
         ]);
     }
