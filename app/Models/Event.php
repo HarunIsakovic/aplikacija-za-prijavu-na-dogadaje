@@ -20,6 +20,14 @@ class Event extends Model
         'status',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'starts_at' => 'datetime',
+            'ends_at' => 'datetime',
+        ];
+    }
+
     protected static function booted(): void
     {
         static::creating(function (Event $event) {
@@ -41,7 +49,7 @@ class Event extends Model
         $baseSlug = Str::slug($title);
 
         if ($baseSlug === '') {
-            $baseSlug = 'dogadjaj';
+            $baseSlug = 'dogadaj';
         }
 
         $slug = $baseSlug;
@@ -82,5 +90,14 @@ class Event extends Model
     public function registrations(): HasMany
     {
         return $this->hasMany(EventRegistration::class);
+    }
+
+    /**
+     * @return BelongsToMany<User, $this>
+     */
+    public function favoritedBy(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'event_favorites')
+            ->withTimestamps();
     }
 }

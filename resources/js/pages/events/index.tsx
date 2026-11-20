@@ -1,6 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { CalendarDays, MapPin, Users, Tag as TagIcon } from 'lucide-react';
+import {
+    CalendarDays,
+    Heart,
+    MapPin,
+    Users,
+    Tag as TagIcon,
+} from 'lucide-react';
 
 type Category = {
     id: number;
@@ -24,6 +30,7 @@ type EventData = {
     capacity: number;
     registered_count: number;
     is_registered: boolean;
+    is_favorite?: boolean;
     categories: Category[];
     tags: Tag[];
 };
@@ -48,6 +55,7 @@ type Props = {
     categories: Category[];
     tags: Tag[];
     can_register: boolean;
+    can_favorite: boolean;
     filters: {
         search?: string;
         category_ids?: (string | number)[];
@@ -60,6 +68,7 @@ export default function EventsIndex({
     categories,
     tags,
     can_register,
+    can_favorite,
     filters,
 }: Props) {
     const [search, setSearch] = useState(filters.search ?? '');
@@ -126,6 +135,22 @@ export default function EventsIndex({
         });
     }
 
+    function toggleFavorite(event: EventData) {
+        if (event.is_favorite) {
+            router.delete(`/events/${event.id}/favorite`, {
+                preserveScroll: true,
+            });
+        } else {
+            router.post(
+                `/events/${event.id}/favorite`,
+                {},
+                {
+                    preserveScroll: true,
+                },
+            );
+        }
+    }
+
     function clearFilters() {
         setSearch('');
         setSelectedCategories([]);
@@ -152,13 +177,25 @@ export default function EventsIndex({
                         Pregledajte dostupne događaje i pronađite nešto za sebe.
                     </p>
 
-                    <Link
-                        href="/events/archive"
-                        className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                    >
-                        <CalendarDays className="size-4" />
-                        Pogledajte arhivu završenih događaja
-                    </Link>
+                    <div className="mt-4 flex flex-wrap gap-4">
+                        <Link
+                            href="/events/archive"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                        >
+                            <CalendarDays className="size-4" />
+                            Pogledajte arhivu završenih događaja
+                        </Link>
+
+                        {can_favorite && (
+                            <Link
+                                href="/my-favorites"
+                                className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
+                            >
+                                <Heart className="size-4" />
+                                Moji omiljeni događaji
+                            </Link>
+                        )}
+                    </div>
                 </div>
 
                 <div className="space-y-5 rounded-xl border bg-card p-5 shadow-sm">
@@ -387,12 +424,16 @@ export default function EventsIndex({
                                             <div
                                                 className="h-full rounded-full bg-primary transition-all"
                                                 style={{
-                                                    width: `${Math.min(
-                                                        (event.registered_count /
-                                                            event.capacity) *
-                                                            100,
-                                                        100,
-                                                    )}%`,
+                                                    width: `${
+                                                        event.capacity > 0
+                                                            ? Math.min(
+                                                                  (event.registered_count /
+                                                                      event.capacity) *
+                                                                      100,
+                                                                  100,
+                                                              )
+                                                            : 0
+                                                    }%`,
                                                 }}
                                             />
                                         </div>
@@ -412,7 +453,32 @@ export default function EventsIndex({
                                         </div>
                                     )}
 
-                                    <div className="mt-auto">
+                                    <div className="mt-auto space-y-3">
+                                        {can_favorite && (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    toggleFavorite(event)
+                                                }
+                                                className={`w-full rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                                                    event.is_favorite
+                                                        ? 'border-primary/50 bg-primary/10 text-primary hover:bg-primary/20'
+                                                        : 'hover:bg-muted'
+                                                }`}
+                                            >
+                                                <Heart
+                                                    className={`mr-2 inline size-4 ${
+                                                        event.is_favorite
+                                                            ? 'fill-current'
+                                                            : ''
+                                                    }`}
+                                                />
+                                                {event.is_favorite
+                                                    ? 'Ukloni iz omiljenih'
+                                                    : 'Dodaj u omiljene'}
+                                            </button>
+                                        )}
+
                                         {!can_register ? (
                                             <Link
                                                 href="/login"
