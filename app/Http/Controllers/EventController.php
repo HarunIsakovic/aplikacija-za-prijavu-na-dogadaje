@@ -133,7 +133,7 @@ class EventController extends Controller
             404
         );
 
-        $event->load(['categories', 'tags']);
+        $event->load(['categories', 'tags', 'seatPriceGroups']);
 
         $event->loadCount([
             'registrations as registered_count' => function ($query) {

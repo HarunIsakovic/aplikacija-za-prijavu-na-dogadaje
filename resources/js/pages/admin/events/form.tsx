@@ -22,6 +22,12 @@ type Tag = {
     name: string;
 };
 
+type PriceGroup = {
+    from_row: number;
+    to_row: number;
+    price: string;
+};
+
 type EventData = {
     id: number;
     categories: Category[];
@@ -33,6 +39,13 @@ type EventData = {
     capacity: number;
     seat_rows: number;
     seat_columns: number;
+    max_tickets_per_user: number;
+    seat_price_groups: {
+        id: number;
+        from_row: number;
+        to_row: number;
+        price: string;
+    }[];
     image: string | null;
     status: 'draft' | 'published';
     tags: Tag[];
@@ -51,13 +64,79 @@ export default function EventForm({ categories, event, tags }: Props) {
     const [seatColumns, setSeatColumns] = useState(
         event?.seat_columns ?? event?.capacity ?? 1,
     );
+    const [maxTicketsPerUser, setMaxTicketsPerUser] = useState(
+        event?.max_tickets_per_user ?? 1,
+    );
+
+    const [priceGroups, setPriceGroups] = useState<PriceGroup[]>(
+        event?.seat_price_groups?.map((group) => ({
+            from_row: group.from_row,
+            to_row: group.to_row,
+            price: group.price,
+        })) ?? [
+            {
+                from_row: 1,
+                to_row: event?.seat_rows ?? 1,
+                price: '0',
+            },
+        ],
+    );
 
     const capacity = seatRows * seatColumns;
 
     useEffect(() => {
         setSeatRows(event?.seat_rows ?? 1);
         setSeatColumns(event?.seat_columns ?? event?.capacity ?? 1);
+        setMaxTicketsPerUser(event?.max_tickets_per_user ?? 1);
+
+        setPriceGroups(
+            event?.seat_price_groups?.map((group) => ({
+                from_row: group.from_row,
+                to_row: group.to_row,
+                price: group.price,
+            })) ?? [
+                {
+                    from_row: 1,
+                    to_row: event?.seat_rows ?? 1,
+                    price: '0',
+                },
+            ],
+        );
     }, [event]);
+
+    function updatePriceGroup(
+        index: number,
+        field: keyof PriceGroup,
+        value: number | string,
+    ) {
+        setPriceGroups((current) =>
+            current.map((group, groupIndex) =>
+                groupIndex === index ? { ...group, [field]: value } : group,
+            ),
+        );
+    }
+
+    function addPriceGroup() {
+        setPriceGroups((current) => {
+            const lastGroup = current[current.length - 1];
+            const nextRow = lastGroup ? lastGroup.to_row + 1 : 1;
+
+            return [
+                ...current,
+                {
+                    from_row: nextRow,
+                    to_row: Math.max(nextRow, seatRows),
+                    price: '0',
+                },
+            ];
+        });
+    }
+
+    function removePriceGroup(index: number) {
+        setPriceGroups((current) =>
+            current.filter((_, groupIndex) => groupIndex !== index),
+        );
+    }
 
     return (
         <Form
@@ -277,6 +356,170 @@ export default function EventForm({ categories, event, tags }: Props) {
                             redova i sjedišta u jednom redu.
                         </p>
                         <InputError message={errors.capacity} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="max_tickets_per_user">
+                            Maksimalan broj karata po korisniku
+                        </Label>
+                        <Input
+                            id="max_tickets_per_user"
+                            name="max_tickets_per_user"
+                            type="number"
+                            min="1"
+                            max={capacity}
+                            value={maxTicketsPerUser}
+                            onChange={(e) =>
+                                setMaxTicketsPerUser(
+                                    Math.max(1, Number(e.target.value)),
+                                )
+                            }
+                            required
+                        />
+                        <p className="text-sm text-muted-foreground">
+                            Odredite koliko najviše sjedišta jedan korisnik može
+                            odabrati za ovaj događaj.
+                        </p>
+                        <InputError message={errors.max_tickets_per_user} />
+                    </div>
+
+                    <div className="grid gap-3">
+                        <div>
+                            <Label>Cjenovne grupe sjedišta</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Odredite cijenu za raspone redova. Svaki red
+                                mora pripadati tačno jednoj cjenovnoj grupi.
+                            </p>
+                        </div>
+
+                        {priceGroups.map((group, index) => (
+                            <div
+                                key={index}
+                                className="grid gap-3 rounded-md border p-4"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <Label>Cjenovna grupa {index + 1}</Label>
+
+                                    {priceGroups.length > 1 && (
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() =>
+                                                removePriceGroup(index)
+                                            }
+                                        >
+                                            Ukloni
+                                        </Button>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid gap-2">
+                                        <Label
+                                            htmlFor={`price-group-${index}-from`}
+                                        >
+                                            Od reda
+                                        </Label>
+                                        <Input
+                                            id={`price-group-${index}-from`}
+                                            name={`price_groups[${index}][from_row]`}
+                                            type="number"
+                                            min="1"
+                                            max={seatRows}
+                                            value={group.from_row}
+                                            onChange={(e) =>
+                                                updatePriceGroup(
+                                                    index,
+                                                    'from_row',
+                                                    Number(e.target.value),
+                                                )
+                                            }
+                                            required
+                                        />
+                                        <InputError
+                                            message={
+                                                errors[
+                                                    `price_groups.${index}.from_row`
+                                                ]
+                                            }
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label
+                                            htmlFor={`price-group-${index}-to`}
+                                        >
+                                            Do reda
+                                        </Label>
+                                        <Input
+                                            id={`price-group-${index}-to`}
+                                            name={`price_groups[${index}][to_row]`}
+                                            type="number"
+                                            min="1"
+                                            max={seatRows}
+                                            value={group.to_row}
+                                            onChange={(e) =>
+                                                updatePriceGroup(
+                                                    index,
+                                                    'to_row',
+                                                    Number(e.target.value),
+                                                )
+                                            }
+                                            required
+                                        />
+                                        <InputError
+                                            message={
+                                                errors[
+                                                    `price_groups.${index}.to_row`
+                                                ]
+                                            }
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <Label
+                                        htmlFor={`price-group-${index}-price`}
+                                    >
+                                        Cijena jednog sjedišta (KM)
+                                    </Label>
+                                    <Input
+                                        id={`price-group-${index}-price`}
+                                        name={`price_groups[${index}][price]`}
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={group.price}
+                                        onChange={(e) =>
+                                            updatePriceGroup(
+                                                index,
+                                                'price',
+                                                e.target.value,
+                                            )
+                                        }
+                                        required
+                                    />
+                                    <InputError
+                                        message={
+                                            errors[
+                                                `price_groups.${index}.price`
+                                            ]
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        ))}
+
+                        <InputError message={errors.price_groups} />
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={addPriceGroup}
+                        >
+                            Dodaj cjenovnu grupu
+                        </Button>
                     </div>
 
                     <div className="grid gap-2">

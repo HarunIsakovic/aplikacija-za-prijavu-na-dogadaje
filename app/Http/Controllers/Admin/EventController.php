@@ -8,6 +8,7 @@ use App\Models\Event;
 use App\Models\Tag;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
@@ -64,13 +65,21 @@ class EventController extends Controller
 
         $categoryIds = $validated['categories'];
         $tagIds = $validated['tags'] ?? [];
+        $priceGroups = $validated['price_groups'];
 
-        unset($validated['categories'], $validated['tags']);
+        unset(
+            $validated['categories'],
+            $validated['tags'],
+            $validated['price_groups']
+        );
 
-        $event = Event::create($validated);
+        DB::transaction(function () use ($validated, $categoryIds, $tagIds, $priceGroups) {
+            $event = Event::create($validated);
 
-        $event->categories()->sync($categoryIds);
-        $event->tags()->sync($tagIds);
+            $event->categories()->sync($categoryIds);
+            $event->tags()->sync($tagIds);
+            $event->seatPriceGroups()->createMany($priceGroups);
+        });
 
         return redirect()
             ->route('admin.events.index')
@@ -87,7 +96,7 @@ class EventController extends Controller
             ->orderBy('name')
             ->get();
 
-        $event->load(['categories', 'tags']);
+        $event->load(['categories', 'tags', 'seatPriceGroups']);
 
         return Inertia::render('admin/events/edit', [
             'event' => $event,
@@ -112,13 +121,23 @@ class EventController extends Controller
 
         $categoryIds = $validated['categories'];
         $tagIds = $validated['tags'] ?? [];
+        $priceGroups = $validated['price_groups'];
 
-        unset($validated['categories'], $validated['tags']);
+        unset(
+            $validated['categories'],
+            $validated['tags'],
+            $validated['price_groups']
+        );
 
-        $event->update($validated);
+        DB::transaction(function () use ($event, $validated, $categoryIds, $tagIds, $priceGroups) {
+            $event->update($validated);
 
-        $event->categories()->sync($categoryIds);
-        $event->tags()->sync($tagIds);
+            $event->categories()->sync($categoryIds);
+            $event->tags()->sync($tagIds);
+
+            $event->seatPriceGroups()->delete();
+            $event->seatPriceGroups()->createMany($priceGroups);
+        });
 
         return redirect()
             ->route('admin.events.index')
@@ -127,7 +146,7 @@ class EventController extends Controller
 
     public function duplicate(Event $event): RedirectResponse
     {
-        $event->load(['categories', 'tags']);
+        $event->load(['categories', 'tags', 'seatPriceGroups']);
 
         $imagePath = null;
 
@@ -138,21 +157,34 @@ class EventController extends Controller
             Storage::disk('public')->copy($event->image, $imagePath);
         }
 
-        $copy = Event::create([
-            'title' => $event->title.' (kopija)',
-            'description' => $event->description,
-            'location' => $event->location,
-            'starts_at' => $event->starts_at,
-            'ends_at' => $event->ends_at,
-            'capacity' => $event->capacity,
-            'seat_rows' => $event->seat_rows,
-            'seat_columns' => $event->seat_columns,
-            'image' => $imagePath,
-            'status' => 'draft',
-        ]);
+        $copy = DB::transaction(function () use ($event, $imagePath) {
+            $copy = Event::create([
+                'title' => $event->title.' (kopija)',
+                'description' => $event->description,
+                'location' => $event->location,
+                'starts_at' => $event->starts_at,
+                'ends_at' => $event->ends_at,
+                'capacity' => $event->capacity,
+                'seat_rows' => $event->seat_rows,
+                'seat_columns' => $event->seat_columns,
+                'max_tickets_per_user' => $event->max_tickets_per_user,
+                'image' => $imagePath,
+                'status' => 'draft',
+            ]);
 
-        $copy->categories()->sync($event->categories->modelKeys());
-        $copy->tags()->sync($event->tags->modelKeys());
+            $copy->categories()->sync($event->categories->modelKeys());
+            $copy->tags()->sync($event->tags->modelKeys());
+
+            $copy->seatPriceGroups()->createMany(
+                $event->seatPriceGroups->map(fn ($group) => [
+                    'from_row' => $group->from_row,
+                    'to_row' => $group->to_row,
+                    'price' => $group->price,
+                ])->all()
+            );
+
+            return $copy;
+        });
 
         return redirect()
             ->route('admin.events.edit', $copy)
@@ -188,6 +220,11 @@ class EventController extends Controller
             'capacity' => ['required', 'integer', 'min:1'],
             'seat_rows' => ['required', 'integer', 'min:1'],
             'seat_columns' => ['required', 'integer', 'min:1'],
+            'max_tickets_per_user' => ['required', 'integer', 'min:1', 'lte:capacity'],
+            'price_groups' => ['required', 'array', 'min:1'],
+            'price_groups.*.from_row' => ['required', 'integer', 'min:1'],
+            'price_groups.*.to_row' => ['required', 'integer', 'min:1'],
+            'price_groups.*.price' => ['required', 'numeric', 'min:0'],
             'status' => ['required', 'in:draft,published'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'tags' => ['nullable', 'array'],
@@ -211,6 +248,76 @@ class EventController extends Controller
                 $validator->errors()->add(
                     'capacity',
                     'Kapacitet mora biti jednak broju redova pomnoženom brojem kolona.'
+                );
+
+                return;
+            }
+
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $priceGroups = $request->input('price_groups', []);
+            $ranges = [];
+            $hasInvalidRange = false;
+
+            foreach ($priceGroups as $index => $group) {
+                $fromRow = (int) $group['from_row'];
+                $toRow = (int) $group['to_row'];
+
+                if ($fromRow > $toRow) {
+                    $validator->errors()->add(
+                        "price_groups.{$index}.from_row",
+                        'Početni red ne može biti veći od završnog reda.'
+                    );
+
+                    $hasInvalidRange = true;
+
+                    continue;
+                }
+
+                if ($toRow > $seatRows) {
+                    $validator->errors()->add(
+                        "price_groups.{$index}.to_row",
+                        'Završni red ne može biti veći od ukupnog broja redova.'
+                    );
+
+                    $hasInvalidRange = true;
+
+                    continue;
+                }
+
+                $ranges[] = [
+                    'from' => $fromRow,
+                    'to' => $toRow,
+                ];
+            }
+
+            if ($hasInvalidRange) {
+                return;
+            }
+
+            usort($ranges, fn (array $a, array $b) => $a['from'] <=> $b['from']);
+
+            $expectedRow = 1;
+
+            foreach ($ranges as $range) {
+                if ($range['from'] !== $expectedRow) {
+                    $validator->errors()->add(
+                        'price_groups',
+                        'Cjenovne grupe moraju pokriti sve redove tačno jednom, bez praznina i preklapanja.'
+                    );
+
+                    return;
+                }
+
+                $expectedRow = $range['to'] + 1;
+            }
+
+            if ($expectedRow !== $seatRows + 1) {
+                $validator->errors()->add(
+                    'price_groups',
+                    'Cjenovne grupe moraju pokriti sve redove tačno jednom, bez praznina i preklapanja.'
                 );
             }
         });

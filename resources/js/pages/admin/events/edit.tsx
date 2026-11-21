@@ -22,6 +22,13 @@ type EventData = {
     capacity: number;
     seat_rows: number;
     seat_columns: number;
+    max_tickets_per_user: number;
+    seat_price_groups: {
+        id: number;
+        from_row: number;
+        to_row: number;
+        price: string;
+    }[];
     image: string | null;
     status: 'draft' | 'published';
     tags: Tag[];
