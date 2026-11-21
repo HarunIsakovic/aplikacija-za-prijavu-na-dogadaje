@@ -12,6 +12,8 @@ use Illuminate\Support\Str;
  * @property Carbon $starts_at
  * @property Carbon|null $ends_at
  * @property int $registered_count
+ * @property int $seat_rows
+ * @property int $seat_columns
  */
 class Event extends Model
 {
@@ -22,6 +24,8 @@ class Event extends Model
         'starts_at',
         'ends_at',
         'capacity',
+        'seat_rows',
+        'seat_columns',
         'image',
         'status',
     ];
@@ -31,6 +35,8 @@ class Event extends Model
         return [
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
+            'seat_rows' => 'integer',
+            'seat_columns' => 'integer',
         ];
     }
 

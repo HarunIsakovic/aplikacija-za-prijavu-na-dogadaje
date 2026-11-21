@@ -71,6 +71,8 @@ test('admin moze kreirati dogadaj', function () {
             'starts_at' => now()->addDays(10)->format('Y-m-d H:i:s'),
             'ends_at' => null,
             'capacity' => 50,
+            'seat_rows' => 5,
+            'seat_columns' => 10,
             'status' => 'published',
         ]);
 
@@ -88,6 +90,8 @@ test('admin moze kreirati dogadaj', function () {
         'title' => 'Laravel konferencija',
         'location' => 'Sarajevo',
         'capacity' => 50,
+        'seat_rows' => 5,
+        'seat_columns' => 10,
         'status' => 'published',
     ]);
 });
@@ -123,6 +127,8 @@ test('admin moze urediti dogadaj', function () {
             'starts_at' => now()->addDays(10)->format('Y-m-d H:i:s'),
             'ends_at' => null,
             'capacity' => 50,
+            'seat_rows' => 5,
+            'seat_columns' => 10,
             'status' => 'published',
         ]);
 
@@ -139,8 +145,38 @@ test('admin moze urediti dogadaj', function () {
         'description' => 'Novi opis.',
         'location' => 'Sarajevo',
         'capacity' => 50,
+        'seat_rows' => 5,
+        'seat_columns' => 10,
         'status' => 'published',
     ]);
+});
+
+test('admin ne moze kreirati dogadaj sa kapacitetom koji ne odgovara dimenzijama sjedista', function () {
+    $admin = User::factory()->create([
+        'role' => 'admin',
+    ]);
+
+    $category = Category::create([
+        'name' => 'Konferencija',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->post(route('admin.events.store'), [
+            'categories' => [$category->id],
+            'title' => 'Laravel konferencija',
+            'description' => 'Konferencija o Laravelu.',
+            'location' => 'Sarajevo',
+            'starts_at' => now()->addDays(10)->format('Y-m-d H:i:s'),
+            'ends_at' => null,
+            'capacity' => 40,
+            'seat_rows' => 5,
+            'seat_columns' => 10,
+            'status' => 'published',
+        ]);
+
+    $response->assertSessionHasErrors(['capacity']);
+
+    $this->assertDatabaseCount('events', 0);
 });
 
 test('admin moze obrisati dogadaj', function () {
@@ -199,6 +235,8 @@ test('admin ne moze kreirati dogadaj sa neispravnim podacima', function () {
         'location',
         'starts_at',
         'capacity',
+        'seat_rows',
+        'seat_columns',
         'status',
     ]);
 
@@ -223,6 +261,8 @@ test('admin ne moze kreirati dogadaj gdje je datum zavrsetka prije datuma pocetk
             'starts_at' => now()->addDays(10)->format('Y-m-d H:i:s'),
             'ends_at' => now()->addDays(9)->format('Y-m-d H:i:s'),
             'capacity' => 20,
+            'seat_rows' => 4,
+            'seat_columns' => 5,
             'status' => 'draft',
         ]);
 
@@ -249,6 +289,8 @@ test('admin ne moze kreirati dogadaj sa neispravnom slikom', function () {
             'starts_at' => now()->addDays(7)->format('Y-m-d H:i:s'),
             'ends_at' => null,
             'capacity' => 30,
+            'seat_rows' => 5,
+            'seat_columns' => 6,
             'status' => 'draft',
             'image' => 'ovo-nije-slika',
         ]);
@@ -284,6 +326,8 @@ test('admin moze kreirati dogadaj sa vise tagova', function () {
             'starts_at' => now()->addDays(10)->format('Y-m-d H:i:s'),
             'ends_at' => null,
             'capacity' => 30,
+            'seat_rows' => 5,
+            'seat_columns' => 6,
             'status' => 'published',
             'tags' => [$tag1->id, $tag2->id],
         ]);
@@ -354,6 +398,8 @@ test('admin moze urediti tagove dogadaja', function () {
             'starts_at' => now()->addDays(10)->format('Y-m-d H:i:s'),
             'ends_at' => null,
             'capacity' => 30,
+            'seat_rows' => 5,
+            'seat_columns' => 6,
             'status' => 'published',
             'tags' => [$tag3->id],
         ]);
@@ -410,6 +456,8 @@ test('admin moze sakriti objavljeni dogadaj', function () {
             'starts_at' => now()->addDays(7)->format('Y-m-d H:i:s'),
             'ends_at' => null,
             'capacity' => 30,
+            'seat_rows' => 5,
+            'seat_columns' => 6,
             'status' => 'draft',
         ]);
 
@@ -441,6 +489,8 @@ test('admin moze duplicirati dogadaj kao nacrt', function () {
         'starts_at' => now()->addDays(7),
         'ends_at' => now()->addDays(8),
         'capacity' => 30,
+        'seat_rows' => 3,
+        'seat_columns' => 10,
         'image' => null,
         'status' => 'published',
     ]);
@@ -462,6 +512,8 @@ test('admin moze duplicirati dogadaj kao nacrt', function () {
         'description' => 'Opis radionice.',
         'location' => 'Zenica',
         'capacity' => 30,
+        'seat_rows' => 3,
+        'seat_columns' => 10,
         'status' => 'draft',
     ]);
 
