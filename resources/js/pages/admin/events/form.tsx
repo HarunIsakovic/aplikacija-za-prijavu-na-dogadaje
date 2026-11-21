@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,8 @@ type EventData = {
     starts_at: string;
     ends_at: string | null;
     capacity: number;
+    seat_rows: number;
+    seat_columns: number;
     image: string | null;
     status: 'draft' | 'published';
     tags: Tag[];
@@ -43,6 +46,18 @@ type Props = {
 
 export default function EventForm({ categories, event, tags }: Props) {
     const isEditing = Boolean(event);
+
+    const [seatRows, setSeatRows] = useState(event?.seat_rows ?? 1);
+    const [seatColumns, setSeatColumns] = useState(
+        event?.seat_columns ?? event?.capacity ?? 1,
+    );
+
+    const capacity = seatRows * seatColumns;
+
+    useEffect(() => {
+        setSeatRows(event?.seat_rows ?? 1);
+        setSeatColumns(event?.seat_columns ?? event?.capacity ?? 1);
+    }, [event]);
 
     return (
         <Form
@@ -213,15 +228,54 @@ export default function EventForm({ categories, event, tags }: Props) {
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="capacity">Kapacitet</Label>
+                        <Label htmlFor="seat_rows">Broj redova sjedišta</Label>
+                        <Input
+                            id="seat_rows"
+                            name="seat_rows"
+                            type="number"
+                            min="1"
+                            value={seatRows}
+                            onChange={(e) =>
+                                setSeatRows(Math.max(1, Number(e.target.value)))
+                            }
+                            required
+                        />
+                        <InputError message={errors.seat_rows} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="seat_columns">
+                            Broj sjedišta u jednom redu
+                        </Label>
+                        <Input
+                            id="seat_columns"
+                            name="seat_columns"
+                            type="number"
+                            min="1"
+                            value={seatColumns}
+                            onChange={(e) =>
+                                setSeatColumns(
+                                    Math.max(1, Number(e.target.value)),
+                                )
+                            }
+                            required
+                        />
+                        <InputError message={errors.seat_columns} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="capacity">Ukupan kapacitet</Label>
                         <Input
                             id="capacity"
                             name="capacity"
                             type="number"
-                            min="1"
-                            defaultValue={event?.capacity ?? 1}
-                            required
+                            value={capacity}
+                            readOnly
                         />
+                        <p className="text-sm text-muted-foreground">
+                            Kapacitet se automatski izračunava na osnovu broja
+                            redova i sjedišta u jednom redu.
+                        </p>
                         <InputError message={errors.capacity} />
                     </div>
 

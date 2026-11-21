@@ -20,6 +20,8 @@ type EventData = {
     starts_at: string;
     ends_at: string | null;
     capacity: number;
+    seat_rows: number;
+    seat_columns: number;
     image: string | null;
     status: 'draft' | 'published';
     tags: Tag[];
