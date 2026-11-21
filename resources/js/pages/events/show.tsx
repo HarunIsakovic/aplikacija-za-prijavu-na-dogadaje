@@ -12,6 +12,13 @@ type Tag = {
     name: string;
 };
 
+type SeatPriceGroup = {
+    id: number;
+    from_row: number;
+    to_row: number;
+    price: string | number;
+};
+
 type EventData = {
     id: number;
     slug: string;
@@ -24,6 +31,8 @@ type EventData = {
     capacity: number;
     seat_rows: number;
     seat_columns: number;
+    max_tickets_per_user: number;
+    seat_price_groups: SeatPriceGroup[];
     registered_count: number;
     is_registered?: boolean;
     is_favorite?: boolean;
@@ -51,6 +60,13 @@ function escapeIcsText(value: string): string {
         .replace(/\r\n|\n|\r/g, '\\n')
         .replace(/,/g, '\\,')
         .replace(/;/g, '\\;');
+}
+
+function formatPrice(price: number): string {
+    return `${new Intl.NumberFormat('bs-BA', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(price)} KM`;
 }
 
 export default function EventShow({
@@ -83,6 +99,20 @@ export default function EventShow({
         !is_archived &&
         !event.is_registered &&
         availableSeats > 0;
+
+    function getSeatPrice(row: number): number {
+        const priceGroup = event.seat_price_groups.find(
+            (group) => row >= group.from_row && row <= group.to_row,
+        );
+
+        return Number(priceGroup?.price ?? 0);
+    }
+
+    const selectedTotal = selectedSeats.reduce((total, seat) => {
+        const [row] = seat.split('-').map(Number);
+
+        return total + getSeatPrice(row);
+    }, 0);
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -117,11 +147,18 @@ export default function EventShow({
                 );
             });
 
-            setSelectedSeats([...new Set(validSeats)]);
+            setSelectedSeats(
+                [...new Set(validSeats)].slice(0, event.max_tickets_per_user),
+            );
         }
 
         setSelectionInitialized(true);
-    }, [event.id, event.seat_rows, event.seat_columns]);
+    }, [
+        event.id,
+        event.seat_rows,
+        event.seat_columns,
+        event.max_tickets_per_user,
+    ]);
 
     useEffect(() => {
         if (!selectionInitialized) {
@@ -156,16 +193,22 @@ export default function EventShow({
 
         const seatId = `${row}-${column}`;
 
-        setSelectedSeats((currentSeats) =>
-            currentSeats.includes(seatId)
-                ? currentSeats.filter((seat) => seat !== seatId)
-                : [...currentSeats, seatId].sort((a, b) => {
-                      const [rowA, columnA] = a.split('-').map(Number);
-                      const [rowB, columnB] = b.split('-').map(Number);
+        setSelectedSeats((currentSeats) => {
+            if (currentSeats.includes(seatId)) {
+                return currentSeats.filter((seat) => seat !== seatId);
+            }
 
-                      return rowA - rowB || columnA - columnB;
-                  }),
-        );
+            if (currentSeats.length >= event.max_tickets_per_user) {
+                return currentSeats;
+            }
+
+            return [...currentSeats, seatId].sort((a, b) => {
+                const [rowA, columnA] = a.split('-').map(Number);
+                const [rowB, columnB] = b.split('-').map(Number);
+
+                return rowA - rowB || columnA - columnB;
+            });
+        });
     }
 
     function addToCalendar() {
@@ -382,7 +425,8 @@ export default function EventShow({
 
                                     <p className="mt-1 text-sm text-muted-foreground">
                                         Odaberite sjedišta klikom na mjesta u
-                                        mapi.
+                                        mapi. Možete odabrati najviše{' '}
+                                        {event.max_tickets_per_user} sjedišta.
                                     </p>
                                 </div>
 
@@ -409,13 +453,22 @@ export default function EventShow({
                                                                 selectedSeats.includes(
                                                                     seatId,
                                                                 );
+                                                            const price =
+                                                                getSeatPrice(
+                                                                    row,
+                                                                );
+                                                            const limitReached =
+                                                                selectedSeats.length >=
+                                                                event.max_tickets_per_user;
 
                                                             return (
                                                                 <button
                                                                     key={seatId}
                                                                     type="button"
                                                                     disabled={
-                                                                        !canSelectSeats
+                                                                        !canSelectSeats ||
+                                                                        (!isSelected &&
+                                                                            limitReached)
                                                                     }
                                                                     onClick={() =>
                                                                         toggleSeat(
@@ -423,8 +476,8 @@ export default function EventShow({
                                                                             column,
                                                                         )
                                                                     }
-                                                                    title={`Red ${row}, sjedište ${column}`}
-                                                                    aria-label={`Red ${row}, sjedište ${column}`}
+                                                                    title={`Red ${row}, sjedište ${column} — Cijena: ${formatPrice(price)}`}
+                                                                    aria-label={`Red ${row}, sjedište ${column}, cijena ${formatPrice(price)}`}
                                                                     aria-pressed={
                                                                         isSelected
                                                                     }
@@ -433,7 +486,9 @@ export default function EventShow({
                                                                             ? 'border-primary bg-primary text-primary-foreground'
                                                                             : 'border-border bg-background hover:border-primary hover:bg-primary/10'
                                                                     } ${
-                                                                        !canSelectSeats
+                                                                        !canSelectSeats ||
+                                                                        (!isSelected &&
+                                                                            limitReached)
                                                                             ? 'cursor-not-allowed opacity-60'
                                                                             : 'cursor-pointer'
                                                                     }`}
@@ -462,18 +517,46 @@ export default function EventShow({
                                 </div>
 
                                 {canSelectSeats ? (
-                                    <div className="rounded-lg bg-muted p-3">
-                                        <strong>Odabrana sjedišta:</strong>{' '}
-                                        {selectedSeats.length > 0
-                                            ? selectedSeats
-                                                  .map((seat) => {
-                                                      const [row, column] =
-                                                          seat.split('-');
+                                    <div className="space-y-2 rounded-lg bg-muted p-3">
+                                        <strong>Odabrana sjedišta:</strong>
 
-                                                      return `Red ${row}, sjedište ${column}`;
-                                                  })
-                                                  .join('; ')
-                                            : 'Niste odabrali nijedno sjedište.'}
+                                        {selectedSeats.length > 0 ? (
+                                            <ul className="space-y-1 text-sm">
+                                                {selectedSeats.map((seat) => {
+                                                    const [row, column] = seat
+                                                        .split('-')
+                                                        .map(Number);
+
+                                                    return (
+                                                        <li key={seat}>
+                                                            Red {row}, sjedište{' '}
+                                                            {column} —{' '}
+                                                            {formatPrice(
+                                                                getSeatPrice(
+                                                                    row,
+                                                                ),
+                                                            )}
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        ) : (
+                                            <p className="text-sm">
+                                                Niste odabrali nijedno sjedište.
+                                            </p>
+                                        )}
+
+                                        <div className="border-t pt-2 text-sm">
+                                            <div>
+                                                Odabrano: {selectedSeats.length}{' '}
+                                                / {event.max_tickets_per_user}
+                                            </div>
+
+                                            <strong className="text-base">
+                                                Ukupno:{' '}
+                                                {formatPrice(selectedTotal)}
+                                            </strong>
+                                        </div>
                                     </div>
                                 ) : !can_register ? (
                                     <p className="text-sm text-muted-foreground">

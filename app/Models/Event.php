@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
  * @property int $registered_count
  * @property int $seat_rows
  * @property int $seat_columns
+ * @property int $max_tickets_per_user
  */
 class Event extends Model
 {
@@ -26,6 +27,7 @@ class Event extends Model
         'capacity',
         'seat_rows',
         'seat_columns',
+        'max_tickets_per_user',
         'image',
         'status',
     ];
@@ -37,6 +39,7 @@ class Event extends Model
             'ends_at' => 'datetime',
             'seat_rows' => 'integer',
             'seat_columns' => 'integer',
+            'max_tickets_per_user' => 'integer',
         ];
     }
 
@@ -111,5 +114,13 @@ class Event extends Model
     {
         return $this->belongsToMany(User::class, 'event_favorites')
             ->withTimestamps();
+    }
+
+    /**
+     * @return HasMany<EventSeatPriceGroup, $this>
+     */
+    public function seatPriceGroups(): HasMany
+    {
+        return $this->hasMany(EventSeatPriceGroup::class);
     }
 }

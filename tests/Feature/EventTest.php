@@ -657,3 +657,46 @@ test('buduci objavljeni dogadaj nije oznacen kao arhiviran', function () {
             ->where('is_archived', false)
         );
 });
+
+test('detalji dogadaja sadrze maksimalan broj karata i grupe cijena sjedista', function () {
+    $event = Event::create([
+        'title' => 'Laravel konferencija',
+        'description' => 'Opis konferencije.',
+        'location' => 'Sarajevo',
+        'starts_at' => now()->addDays(7),
+        'ends_at' => null,
+        'capacity' => 30,
+        'seat_rows' => 5,
+        'seat_columns' => 6,
+        'max_tickets_per_user' => 4,
+        'image' => null,
+        'status' => 'published',
+    ]);
+
+    $event->seatPriceGroups()->createMany([
+        [
+            'from_row' => 1,
+            'to_row' => 2,
+            'price' => 30,
+        ],
+        [
+            'from_row' => 3,
+            'to_row' => 5,
+            'price' => 20,
+        ],
+    ]);
+
+    $this->get(route('events.show', $event->slug))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('events/show')
+            ->where('event.max_tickets_per_user', 4)
+            ->has('event.seat_price_groups', 2)
+            ->where('event.seat_price_groups.0.from_row', 1)
+            ->where('event.seat_price_groups.0.to_row', 2)
+            ->where('event.seat_price_groups.0.price', '30.00')
+            ->where('event.seat_price_groups.1.from_row', 3)
+            ->where('event.seat_price_groups.1.to_row', 5)
+            ->where('event.seat_price_groups.1.price', '20.00')
+        );
+});

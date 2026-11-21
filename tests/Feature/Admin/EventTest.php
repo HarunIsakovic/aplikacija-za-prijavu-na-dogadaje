@@ -9,13 +9,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 uses(RefreshDatabase::class);
 
 test('admin moze vidjeti listu dogadaja', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
 
-    $category = Category::create([
-        'name' => 'Radionica',
-    ]);
+    $category = Category::create(['name' => 'Radionica']);
 
     $event = Event::create([
         'title' => 'Testni događaj',
@@ -30,10 +26,9 @@ test('admin moze vidjeti listu dogadaja', function () {
 
     $event->categories()->attach($category->id);
 
-    $response = $this->actingAs($admin)
-        ->get(route('admin.events.index'));
-
-    $response->assertOk()
+    $this->actingAs($admin)
+        ->get(route('admin.events.index'))
+        ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('admin/events/index')
             ->has('events.data', 1)
@@ -43,24 +38,16 @@ test('admin moze vidjeti listu dogadaja', function () {
 });
 
 test('obicni korisnik ne moze pristupiti dogadajima u administraciji', function () {
-    $user = User::factory()->create([
-        'role' => 'user',
-    ]);
+    $user = User::factory()->create(['role' => 'user']);
 
-    $response = $this->actingAs($user)
-        ->get(route('admin.events.index'));
-
-    $response->assertForbidden();
+    $this->actingAs($user)
+        ->get(route('admin.events.index'))
+        ->assertForbidden();
 });
 
 test('admin moze kreirati dogadaj', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
-
-    $category = Category::create([
-        'name' => 'Konferencija',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Konferencija']);
 
     $response = $this->actingAs($admin)
         ->post(route('admin.events.store'), [
@@ -73,6 +60,11 @@ test('admin moze kreirati dogadaj', function () {
             'capacity' => 50,
             'seat_rows' => 5,
             'seat_columns' => 10,
+            'max_tickets_per_user' => 4,
+            'price_groups' => [
+                ['from_row' => 1, 'to_row' => 2, 'price' => 30],
+                ['from_row' => 3, 'to_row' => 5, 'price' => 20],
+            ],
             'status' => 'published',
         ]);
 
@@ -92,18 +84,28 @@ test('admin moze kreirati dogadaj', function () {
         'capacity' => 50,
         'seat_rows' => 5,
         'seat_columns' => 10,
+        'max_tickets_per_user' => 4,
         'status' => 'published',
+    ]);
+
+    $this->assertDatabaseHas('event_seat_price_groups', [
+        'event_id' => $event->id,
+        'from_row' => 1,
+        'to_row' => 2,
+        'price' => 30,
+    ]);
+
+    $this->assertDatabaseHas('event_seat_price_groups', [
+        'event_id' => $event->id,
+        'from_row' => 3,
+        'to_row' => 5,
+        'price' => 20,
     ]);
 });
 
 test('admin moze urediti dogadaj', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
-
-    $category = Category::create([
-        'name' => 'Radionica',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Radionica']);
 
     $event = Event::create([
         'title' => 'Stari naziv',
@@ -129,6 +131,10 @@ test('admin moze urediti dogadaj', function () {
             'capacity' => 50,
             'seat_rows' => 5,
             'seat_columns' => 10,
+            'max_tickets_per_user' => 5,
+            'price_groups' => [
+                ['from_row' => 1, 'to_row' => 5, 'price' => 25],
+            ],
             'status' => 'published',
         ]);
 
@@ -147,20 +153,23 @@ test('admin moze urediti dogadaj', function () {
         'capacity' => 50,
         'seat_rows' => 5,
         'seat_columns' => 10,
+        'max_tickets_per_user' => 5,
         'status' => 'published',
+    ]);
+
+    $this->assertDatabaseHas('event_seat_price_groups', [
+        'event_id' => $event->id,
+        'from_row' => 1,
+        'to_row' => 5,
+        'price' => 25,
     ]);
 });
 
 test('admin ne moze kreirati dogadaj sa kapacitetom koji ne odgovara dimenzijama sjedista', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Konferencija']);
 
-    $category = Category::create([
-        'name' => 'Konferencija',
-    ]);
-
-    $response = $this->actingAs($admin)
+    $this->actingAs($admin)
         ->post(route('admin.events.store'), [
             'categories' => [$category->id],
             'title' => 'Laravel konferencija',
@@ -171,22 +180,20 @@ test('admin ne moze kreirati dogadaj sa kapacitetom koji ne odgovara dimenzijama
             'capacity' => 40,
             'seat_rows' => 5,
             'seat_columns' => 10,
+            'max_tickets_per_user' => 4,
+            'price_groups' => [
+                ['from_row' => 1, 'to_row' => 5, 'price' => 20],
+            ],
             'status' => 'published',
-        ]);
-
-    $response->assertSessionHasErrors(['capacity']);
+        ])
+        ->assertSessionHasErrors(['capacity']);
 
     $this->assertDatabaseCount('events', 0);
 });
 
 test('admin moze obrisati dogadaj', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
-
-    $category = Category::create([
-        'name' => 'Radionica',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Radionica']);
 
     $event = Event::create([
         'title' => 'Događaj za brisanje',
@@ -201,22 +208,17 @@ test('admin moze obrisati dogadaj', function () {
 
     $event->categories()->attach($category->id);
 
-    $response = $this->actingAs($admin)
-        ->delete(route('admin.events.destroy', $event));
+    $this->actingAs($admin)
+        ->delete(route('admin.events.destroy', $event))
+        ->assertRedirect(route('admin.events.index'));
 
-    $response->assertRedirect(route('admin.events.index'));
-
-    $this->assertDatabaseMissing('events', [
-        'id' => $event->id,
-    ]);
+    $this->assertDatabaseMissing('events', ['id' => $event->id]);
 });
 
 test('admin ne moze kreirati dogadaj sa neispravnim podacima', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
 
-    $response = $this->actingAs($admin)
+    $this->actingAs($admin)
         ->post(route('admin.events.store'), [
             'categories' => [],
             'title' => '',
@@ -226,33 +228,29 @@ test('admin ne moze kreirati dogadaj sa neispravnim podacima', function () {
             'ends_at' => null,
             'capacity' => 0,
             'status' => 'neispravan',
+        ])
+        ->assertSessionHasErrors([
+            'categories',
+            'title',
+            'description',
+            'location',
+            'starts_at',
+            'capacity',
+            'seat_rows',
+            'seat_columns',
+            'max_tickets_per_user',
+            'price_groups',
+            'status',
         ]);
-
-    $response->assertSessionHasErrors([
-        'categories',
-        'title',
-        'description',
-        'location',
-        'starts_at',
-        'capacity',
-        'seat_rows',
-        'seat_columns',
-        'status',
-    ]);
 
     $this->assertDatabaseCount('events', 0);
 });
 
 test('admin ne moze kreirati dogadaj gdje je datum zavrsetka prije datuma pocetka', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Seminar']);
 
-    $category = Category::create([
-        'name' => 'Seminar',
-    ]);
-
-    $response = $this->actingAs($admin)
+    $this->actingAs($admin)
         ->post(route('admin.events.store'), [
             'categories' => [$category->id],
             'title' => 'Testni seminar',
@@ -263,24 +261,22 @@ test('admin ne moze kreirati dogadaj gdje je datum zavrsetka prije datuma pocetk
             'capacity' => 20,
             'seat_rows' => 4,
             'seat_columns' => 5,
+            'max_tickets_per_user' => 2,
+            'price_groups' => [
+                ['from_row' => 1, 'to_row' => 4, 'price' => 20],
+            ],
             'status' => 'draft',
-        ]);
-
-    $response->assertSessionHasErrors(['ends_at']);
+        ])
+        ->assertSessionHasErrors(['ends_at']);
 
     $this->assertDatabaseCount('events', 0);
 });
 
 test('admin ne moze kreirati dogadaj sa neispravnom slikom', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Radionica']);
 
-    $category = Category::create([
-        'name' => 'Radionica',
-    ]);
-
-    $response = $this->actingAs($admin)
+    $this->actingAs($admin)
         ->post(route('admin.events.store'), [
             'categories' => [$category->id],
             'title' => 'Testni događaj',
@@ -291,31 +287,23 @@ test('admin ne moze kreirati dogadaj sa neispravnom slikom', function () {
             'capacity' => 30,
             'seat_rows' => 5,
             'seat_columns' => 6,
+            'max_tickets_per_user' => 2,
+            'price_groups' => [
+                ['from_row' => 1, 'to_row' => 5, 'price' => 20],
+            ],
             'status' => 'draft',
             'image' => 'ovo-nije-slika',
-        ]);
-
-    $response->assertSessionHasErrors(['image']);
+        ])
+        ->assertSessionHasErrors(['image']);
 
     $this->assertDatabaseCount('events', 0);
 });
 
 test('admin moze kreirati dogadaj sa vise tagova', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
-
-    $category = Category::create([
-        'name' => 'Radionica',
-    ]);
-
-    $tag1 = Tag::create([
-        'name' => 'Besplatno',
-    ]);
-
-    $tag2 = Tag::create([
-        'name' => 'Online',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Radionica']);
+    $tag1 = Tag::create(['name' => 'Besplatno']);
+    $tag2 = Tag::create(['name' => 'Online']);
 
     $response = $this->actingAs($admin)
         ->post(route('admin.events.store'), [
@@ -328,6 +316,10 @@ test('admin moze kreirati dogadaj sa vise tagova', function () {
             'capacity' => 30,
             'seat_rows' => 5,
             'seat_columns' => 6,
+            'max_tickets_per_user' => 3,
+            'price_groups' => [
+                ['from_row' => 1, 'to_row' => 5, 'price' => 15],
+            ],
             'status' => 'published',
             'tags' => [$tag1->id, $tag2->id],
         ]);
@@ -355,25 +347,11 @@ test('admin moze kreirati dogadaj sa vise tagova', function () {
 });
 
 test('admin moze urediti tagove dogadaja', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
-
-    $category = Category::create([
-        'name' => 'Radionica',
-    ]);
-
-    $tag1 = Tag::create([
-        'name' => 'Besplatno',
-    ]);
-
-    $tag2 = Tag::create([
-        'name' => 'Online',
-    ]);
-
-    $tag3 = Tag::create([
-        'name' => 'Za pocetnike',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Radionica']);
+    $tag1 = Tag::create(['name' => 'Besplatno']);
+    $tag2 = Tag::create(['name' => 'Online']);
+    $tag3 = Tag::create(['name' => 'Za pocetnike']);
 
     $event = Event::create([
         'title' => 'Laravel radionica',
@@ -400,6 +378,10 @@ test('admin moze urediti tagove dogadaja', function () {
             'capacity' => 30,
             'seat_rows' => 5,
             'seat_columns' => 6,
+            'max_tickets_per_user' => 3,
+            'price_groups' => [
+                ['from_row' => 1, 'to_row' => 5, 'price' => 15],
+            ],
             'status' => 'published',
             'tags' => [$tag3->id],
         ]);
@@ -426,13 +408,8 @@ test('admin moze urediti tagove dogadaja', function () {
 });
 
 test('admin moze sakriti objavljeni dogadaj', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
-
-    $category = Category::create([
-        'name' => 'Radionica',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Radionica']);
 
     $event = Event::create([
         'title' => 'Objavljena radionica',
@@ -458,6 +435,10 @@ test('admin moze sakriti objavljeni dogadaj', function () {
             'capacity' => 30,
             'seat_rows' => 5,
             'seat_columns' => 6,
+            'max_tickets_per_user' => 2,
+            'price_groups' => [
+                ['from_row' => 1, 'to_row' => 5, 'price' => 20],
+            ],
             'status' => 'draft',
         ]);
 
@@ -470,17 +451,9 @@ test('admin moze sakriti objavljeni dogadaj', function () {
 });
 
 test('admin moze duplicirati dogadaj kao nacrt', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
-
-    $category = Category::create([
-        'name' => 'Radionica',
-    ]);
-
-    $tag = Tag::create([
-        'name' => 'Besplatno',
-    ]);
+    $admin = User::factory()->create(['role' => 'admin']);
+    $category = Category::create(['name' => 'Radionica']);
+    $tag = Tag::create(['name' => 'Besplatno']);
 
     $event = Event::create([
         'title' => 'Laravel radionica',
@@ -491,12 +464,23 @@ test('admin moze duplicirati dogadaj kao nacrt', function () {
         'capacity' => 30,
         'seat_rows' => 3,
         'seat_columns' => 10,
+        'max_tickets_per_user' => 4,
         'image' => null,
         'status' => 'published',
     ]);
 
     $event->categories()->attach($category->id);
     $event->tags()->attach($tag->id);
+    $event->seatPriceGroups()->create([
+        'from_row' => 1,
+        'to_row' => 1,
+        'price' => 30,
+    ]);
+    $event->seatPriceGroups()->create([
+        'from_row' => 2,
+        'to_row' => 3,
+        'price' => 20,
+    ]);
 
     $response = $this->actingAs($admin)
         ->post(route('admin.events.duplicate', $event));
@@ -514,32 +498,34 @@ test('admin moze duplicirati dogadaj kao nacrt', function () {
         'capacity' => 30,
         'seat_rows' => 3,
         'seat_columns' => 10,
+        'max_tickets_per_user' => 4,
         'status' => 'draft',
     ]);
 
     expect($copy->id)->not->toBe($event->id);
+
+    $this->assertDatabaseHas('event_seat_price_groups', [
+        'event_id' => $copy->id,
+        'from_row' => 1,
+        'to_row' => 1,
+        'price' => 30,
+    ]);
+
+    $this->assertDatabaseHas('event_seat_price_groups', [
+        'event_id' => $copy->id,
+        'from_row' => 2,
+        'to_row' => 3,
+        'price' => 20,
+    ]);
 });
 
-test('duplicirani dogadaj zadrzava kategorije i tagove', function () {
-    $admin = User::factory()->create([
-        'role' => 'admin',
-    ]);
+test('duplicirani dogadaj zadrzava kategorije tagove i cijene sjedista', function () {
+    $admin = User::factory()->create(['role' => 'admin']);
 
-    $category1 = Category::create([
-        'name' => 'Radionica',
-    ]);
-
-    $category2 = Category::create([
-        'name' => 'Edukacija',
-    ]);
-
-    $tag1 = Tag::create([
-        'name' => 'Besplatno',
-    ]);
-
-    $tag2 = Tag::create([
-        'name' => 'Online',
-    ]);
+    $category1 = Category::create(['name' => 'Radionica']);
+    $category2 = Category::create(['name' => 'Edukacija']);
+    $tag1 = Tag::create(['name' => 'Besplatno']);
+    $tag2 = Tag::create(['name' => 'Online']);
 
     $event = Event::create([
         'title' => 'Laravel radionica',
@@ -548,12 +534,27 @@ test('duplicirani dogadaj zadrzava kategorije i tagove', function () {
         'starts_at' => now()->addDays(7),
         'ends_at' => null,
         'capacity' => 30,
+        'seat_rows' => 5,
+        'seat_columns' => 6,
+        'max_tickets_per_user' => 3,
         'image' => null,
         'status' => 'published',
     ]);
 
     $event->categories()->sync([$category1->id, $category2->id]);
     $event->tags()->sync([$tag1->id, $tag2->id]);
+
+    $event->seatPriceGroups()->create([
+        'from_row' => 1,
+        'to_row' => 2,
+        'price' => 25,
+    ]);
+
+    $event->seatPriceGroups()->create([
+        'from_row' => 3,
+        'to_row' => 5,
+        'price' => 15,
+    ]);
 
     $this->actingAs($admin)
         ->post(route('admin.events.duplicate', $event))
@@ -567,12 +568,18 @@ test('duplicirani dogadaj zadrzava kategorije i tagove', function () {
 
     expect($copy->tags->modelKeys())
         ->toEqualCanonicalizing([$tag1->id, $tag2->id]);
+
+    expect($copy->max_tickets_per_user)->toBe(3);
+
+    expect($copy->seatPriceGroups)
+        ->toHaveCount(2);
+
+    expect($copy->seatPriceGroups->pluck('price')->all())
+        ->toEqual(['25.00', '15.00']);
 });
 
 test('obicni korisnik ne moze duplicirati dogadaj', function () {
-    $user = User::factory()->create([
-        'role' => 'user',
-    ]);
+    $user = User::factory()->create(['role' => 'user']);
 
     $event = Event::create([
         'title' => 'Laravel radionica',
@@ -585,10 +592,9 @@ test('obicni korisnik ne moze duplicirati dogadaj', function () {
         'status' => 'published',
     ]);
 
-    $response = $this->actingAs($user)
-        ->post(route('admin.events.duplicate', $event));
-
-    $response->assertForbidden();
+    $this->actingAs($user)
+        ->post(route('admin.events.duplicate', $event))
+        ->assertForbidden();
 
     $this->assertDatabaseCount('events', 1);
 });
