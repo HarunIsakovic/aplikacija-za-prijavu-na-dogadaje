@@ -29,6 +29,7 @@ type EventData = {
     ends_at: string | null;
     capacity: number;
     registered_count: number;
+    available_seat_count: number;
     is_registered: boolean;
     is_favorite?: boolean;
     categories: Category[];
@@ -330,8 +331,7 @@ export default function EventsIndex({
                 ) : (
                     <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                         {events.data.map((event) => {
-                            const availableSeats =
-                                event.capacity - event.registered_count;
+                            const availableSeats = event.available_seat_count;
 
                             return (
                                 <article
@@ -427,7 +427,8 @@ export default function EventsIndex({
                                                     width: `${
                                                         event.capacity > 0
                                                             ? Math.min(
-                                                                  (event.registered_count /
+                                                                  ((event.capacity -
+                                                                      event.available_seat_count) /
                                                                       event.capacity) *
                                                                       100,
                                                                   100,

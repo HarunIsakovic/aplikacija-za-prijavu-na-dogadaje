@@ -19,6 +19,12 @@ type SeatPriceGroup = {
     price: string | number;
 };
 
+type UnavailableSeat = {
+    row_number: number;
+    seat_number: number;
+    status: 'reserved' | 'sold';
+};
+
 type EventData = {
     id: number;
     slug: string;
@@ -33,6 +39,7 @@ type EventData = {
     seat_columns: number;
     max_tickets_per_user: number;
     seat_price_groups: SeatPriceGroup[];
+    unavailable_seats: UnavailableSeat[];
     registered_count: number;
     is_registered?: boolean;
     is_favorite?: boolean;
@@ -75,7 +82,17 @@ export default function EventShow({
     can_favorite,
     is_archived,
 }: Props) {
-    const availableSeats = Math.max(0, event.capacity - event.registered_count);
+    const unavailableSeats = event.unavailable_seats ?? [];
+    const unavailableSeatIds = new Set(
+        unavailableSeats.map(
+            (seat) => `${seat.row_number}-${seat.seat_number}`,
+        ),
+    );
+
+    const availableSeats = Math.max(
+        0,
+        event.capacity - unavailableSeats.length,
+    );
 
     const [timeLeft, setTimeLeft] = useState(() =>
         Math.max(0, new Date(event.starts_at).getTime() - Date.now()),
@@ -83,6 +100,7 @@ export default function EventShow({
 
     const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
     const [selectionInitialized, setSelectionInitialized] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const seatRows = Array.from(
         { length: event.seat_rows },
@@ -143,7 +161,8 @@ export default function EventShow({
                     row >= 1 &&
                     row <= event.seat_rows &&
                     column >= 1 &&
-                    column <= event.seat_columns
+                    column <= event.seat_columns &&
+                    !unavailableSeatIds.has(seat)
                 );
             });
 
@@ -158,6 +177,7 @@ export default function EventShow({
         event.seat_rows,
         event.seat_columns,
         event.max_tickets_per_user,
+        event.unavailable_seats,
     ]);
 
     useEffect(() => {
@@ -187,11 +207,15 @@ export default function EventShow({
     const seconds = totalSeconds % 60;
 
     function toggleSeat(row: number, column: number) {
-        if (!canSelectSeats) {
+        if (!canSelectSeats || isSubmitting) {
             return;
         }
 
         const seatId = `${row}-${column}`;
+
+        if (unavailableSeatIds.has(seatId)) {
+            return;
+        }
 
         setSelectedSeats((currentSeats) => {
             if (currentSeats.includes(seatId)) {
@@ -250,12 +274,24 @@ export default function EventShow({
         window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    function registerForEvent() {
-        router.post(`/events/${event.id}/registrations`);
-    }
+    function startReservation() {
+        if (!canSelectSeats || selectedSeats.length === 0 || isSubmitting) {
+            return;
+        }
 
-    function cancelRegistration() {
-        router.delete(`/events/${event.id}/registrations`);
+        setIsSubmitting(true);
+
+        router.post(
+            `/events/${event.id}/reservations`,
+            {
+                seats: selectedSeats,
+            },
+            {
+                preserveScroll: true,
+                onError: () => setIsSubmitting(false),
+                onFinish: () => setIsSubmitting(false),
+            },
+        );
     }
 
     function toggleFavorite() {
@@ -386,8 +422,8 @@ export default function EventShow({
                         </div>
 
                         <div>
-                            <strong>Prijavljeno korisnika:</strong>{' '}
-                            {event.registered_count}
+                            <strong>Zauzeta sjedišta:</strong>{' '}
+                            {unavailableSeats.length}
                         </div>
 
                         {!is_archived && (
@@ -453,6 +489,10 @@ export default function EventShow({
                                                                 selectedSeats.includes(
                                                                     seatId,
                                                                 );
+                                                            const isUnavailable =
+                                                                unavailableSeatIds.has(
+                                                                    seatId,
+                                                                );
                                                             const price =
                                                                 getSeatPrice(
                                                                     row,
@@ -467,8 +507,10 @@ export default function EventShow({
                                                                     type="button"
                                                                     disabled={
                                                                         !canSelectSeats ||
+                                                                        isUnavailable ||
                                                                         (!isSelected &&
-                                                                            limitReached)
+                                                                            limitReached) ||
+                                                                        isSubmitting
                                                                     }
                                                                     onClick={() =>
                                                                         toggleSeat(
@@ -476,19 +518,30 @@ export default function EventShow({
                                                                             column,
                                                                         )
                                                                     }
-                                                                    title={`Red ${row}, sjedište ${column} — Cijena: ${formatPrice(price)}`}
-                                                                    aria-label={`Red ${row}, sjedište ${column}, cijena ${formatPrice(price)}`}
+                                                                    title={
+                                                                        isUnavailable
+                                                                            ? `Red ${row}, sjedište ${column} — Zauzeto`
+                                                                            : `Red ${row}, sjedište ${column} — Cijena: ${formatPrice(price)}`
+                                                                    }
+                                                                    aria-label={`Red ${row}, sjedište ${column}, ${
+                                                                        isUnavailable
+                                                                            ? 'zauzeto'
+                                                                            : `cijena ${formatPrice(price)}`
+                                                                    }`}
                                                                     aria-pressed={
                                                                         isSelected
                                                                     }
                                                                     className={`flex size-9 items-center justify-center rounded-t-lg border text-xs font-medium transition ${
-                                                                        isSelected
-                                                                            ? 'border-primary bg-primary text-primary-foreground'
-                                                                            : 'border-border bg-background hover:border-primary hover:bg-primary/10'
+                                                                        isUnavailable
+                                                                            ? 'cursor-not-allowed border-muted-foreground/30 bg-muted-foreground/40 text-muted-foreground opacity-70'
+                                                                            : isSelected
+                                                                              ? 'border-primary bg-primary text-primary-foreground'
+                                                                              : 'border-border bg-background hover:border-primary hover:bg-primary/10'
                                                                     } ${
                                                                         !canSelectSeats ||
                                                                         (!isSelected &&
-                                                                            limitReached)
+                                                                            limitReached) ||
+                                                                        isSubmitting
                                                                             ? 'cursor-not-allowed opacity-60'
                                                                             : 'cursor-pointer'
                                                                     }`}
@@ -513,6 +566,11 @@ export default function EventShow({
                                     <div className="flex items-center gap-2">
                                         <span className="size-4 rounded border border-primary bg-primary" />
                                         Odabrano
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <span className="size-4 rounded border border-muted-foreground/30 bg-muted-foreground/40" />
+                                        Zauzeto
                                     </div>
                                 </div>
 
@@ -575,9 +633,26 @@ export default function EventShow({
                                 )}
 
                                 <p className="text-xs text-muted-foreground">
-                                    Odabir se trenutno čuva u URL-u. Sjedišta
-                                    još nisu rezervisana.
+                                    Odabir se čuva u adresi stranice. Sjedišta
+                                    nisu rezervisana dok ne nastavite na
+                                    plaćanje.
                                 </p>
+
+                                {canSelectSeats && (
+                                    <button
+                                        type="button"
+                                        onClick={startReservation}
+                                        disabled={
+                                            selectedSeats.length === 0 ||
+                                            isSubmitting
+                                        }
+                                        className="w-full rounded-md bg-primary px-4 py-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {isSubmitting
+                                            ? 'Pokretanje rezervacije...'
+                                            : 'Nastavi na plaćanje'}
+                                    </button>
+                                )}
                             </div>
 
                             <button
@@ -608,34 +683,13 @@ export default function EventShow({
                                 </button>
                             )}
 
-                            {!can_register ? (
+                            {!can_register && (
                                 <Link
                                     href="/login"
                                     className="block w-full rounded-md bg-primary px-4 py-3 text-center font-medium text-primary-foreground hover:bg-primary/90"
                                 >
-                                    Prijavite se da biste se prijavili na
-                                    događaj
+                                    Prijavite se da biste rezervisali sjedišta
                                 </Link>
-                            ) : event.is_registered ? (
-                                <button
-                                    type="button"
-                                    onClick={cancelRegistration}
-                                    className="w-full rounded-md border border-destructive px-4 py-3 font-medium text-destructive hover:bg-destructive/10"
-                                >
-                                    Otkaži prijavu
-                                </button>
-                            ) : availableSeats > 0 ? (
-                                <button
-                                    type="button"
-                                    onClick={registerForEvent}
-                                    className="w-full rounded-md bg-primary px-4 py-3 font-medium text-primary-foreground hover:bg-primary/90"
-                                >
-                                    Prijavi se na događaj
-                                </button>
-                            ) : (
-                                <p className="rounded-md bg-muted p-3 text-center font-medium">
-                                    Događaj je popunjen
-                                </p>
                             )}
                         </div>
                     )}

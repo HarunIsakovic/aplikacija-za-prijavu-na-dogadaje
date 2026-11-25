@@ -123,4 +123,28 @@ class Event extends Model
     {
         return $this->hasMany(EventSeatPriceGroup::class);
     }
+
+    /**
+     * @return HasMany<Reservation, $this>
+     */
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    /**
+     * @return HasMany<EventSeat, $this>
+     */
+    public function seats(): HasMany
+    {
+        return $this->hasMany(EventSeat::class);
+    }
+
+    /**
+     * @return HasMany<ReservationCooldown, $this>
+     */
+    public function reservationCooldowns(): HasMany
+    {
+        return $this->hasMany(ReservationCooldown::class);
+    }
 }
