@@ -8,6 +8,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventRegistrationController;
 use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\ReservationController;
+use App\Http\Controllers\StripeWebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -24,6 +26,10 @@ Route::get('/events/archive', [EventController::class, 'archive'])
 Route::get('/events/{event:slug}', [EventController::class, 'show'])
     ->name('events.show');
 
+// Stripe webhook. Sigurnost se provjerava Stripe potpisom.
+Route::post('/stripe/webhook', StripeWebhookController::class)
+    ->name('stripe.webhook');
+
 Route::middleware(['auth'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
 
@@ -37,15 +43,19 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/events/{event}/favorite', [FavoriteController::class, 'destroy'])
         ->name('events.favorites.destroy');
 
-    // Prijave na događaje.
+    // Pregled postojećih prijava.
     Route::get('/my-registrations', [EventRegistrationController::class, 'index'])
         ->name('registrations.index');
 
-    Route::post('/events/{event}/registrations', [EventRegistrationController::class, 'store'])
-        ->name('events.registrations.store');
+    // Rezervacije i Stripe Checkout.
+    Route::post('/events/{event}/reservations', [ReservationController::class, 'store'])
+        ->name('reservations.store');
 
-    Route::delete('/events/{event}/registrations', [EventRegistrationController::class, 'destroy'])
-        ->name('events.registrations.destroy');
+    Route::get('/reservations/{reservation}/success', [ReservationController::class, 'success'])
+        ->name('reservations.success');
+
+    Route::get('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel'])
+        ->name('reservations.cancel');
 });
 
 Route::middleware(['auth', 'admin'])

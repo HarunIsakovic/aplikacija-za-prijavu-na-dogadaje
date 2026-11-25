@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Event;
+use App\Models\EventSeat;
 use App\Models\Tag;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -29,6 +30,12 @@ class EventController extends Controller
             ->withCount([
                 'registrations as registered_count' => function ($query) {
                     $query->where('status', 'registered');
+                },
+                'seats as unavailable_seats_count' => function ($query) {
+                    $query->whereIn('status', [
+                        EventSeat::STATUS_RESERVED,
+                        EventSeat::STATUS_SOLD,
+                    ]);
                 },
             ])
             ->when($userId !== null, function ($query) use ($userId) {
@@ -70,6 +77,17 @@ class EventController extends Controller
         $events = $eventsQuery
             ->paginate(9)
             ->withQueryString();
+
+        $events->getCollection()->transform(function (Event $event): Event {
+            $unavailableSeatsCount = (int) $event->getAttribute('unavailable_seats_count');
+
+            $event->setAttribute(
+                'available_seat_count',
+                max(0, $event->capacity - $unavailableSeatsCount)
+            );
+
+            return $event;
+        });
 
         return Inertia::render('events/index', [
             'events' => $events,
@@ -158,10 +176,24 @@ class EventController extends Controller
             ]);
         }
 
+        $unavailableSeats = $event->seats()
+            ->whereIn('status', [
+                EventSeat::STATUS_RESERVED,
+                EventSeat::STATUS_SOLD,
+            ])
+            ->get(['id', 'row', 'number', 'status', 'price']);
+
+        $event->setAttribute(
+            'available_seat_count',
+            max(0, $event->capacity - $unavailableSeats->count())
+        );
+
+        $event->setAttribute('unavailable_seats', $unavailableSeats);
+
         return Inertia::render('events/show', [
             'event' => $event,
             'can_register' => $userId !== null && ! $isArchived,
-            'can_favorite' => $canFavorite && ! $isArchived,
+            'can_favorite' => $canFavorite,
             'is_archived' => $isArchived,
         ]);
     }

@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -109,16 +110,6 @@ class EventController extends Controller
     {
         $validated = $this->validateEvent($request);
 
-        if ($request->hasFile('image')) {
-            if ($event->image) {
-                Storage::disk('public')->delete($event->image);
-            }
-
-            $validated['image'] = $request->file('image')->store('events', 'public');
-        } else {
-            unset($validated['image']);
-        }
-
         $categoryIds = $validated['categories'];
         $tagIds = $validated['tags'] ?? [];
         $priceGroups = $validated['price_groups'];
@@ -129,19 +120,98 @@ class EventController extends Controller
             $validated['price_groups']
         );
 
-        DB::transaction(function () use ($event, $validated, $categoryIds, $tagIds, $priceGroups) {
-            $event->update($validated);
+        $oldImage = DB::transaction(function () use (
+            $event,
+            $request,
+            $validated,
+            $categoryIds,
+            $tagIds,
+            $priceGroups,
+        ): ?string {
+            // Isti redoslijed zaključavanja koristi se i prilikom rezervacije.
+            $lockedEvent = Event::query()
+                ->whereKey($event->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-            $event->categories()->sync($categoryIds);
-            $event->tags()->sync($tagIds);
+            $hasReservations = $lockedEvent->reservations()->exists();
 
-            $event->seatPriceGroups()->delete();
-            $event->seatPriceGroups()->createMany($priceGroups);
+            if ($hasReservations) {
+                $lockedEvent->load('seatPriceGroups');
+
+                $seatConfigurationChanged =
+                    (int) $lockedEvent->capacity !== (int) $validated['capacity']
+                    || (int) $lockedEvent->seat_rows !== (int) $validated['seat_rows']
+                    || (int) $lockedEvent->seat_columns !== (int) $validated['seat_columns']
+                    || (int) $lockedEvent->max_tickets_per_user !== (int) $validated['max_tickets_per_user']
+                    || $this->normalizePriceGroups(
+                        $lockedEvent->seatPriceGroups->toArray()
+                    ) !== $this->normalizePriceGroups($priceGroups);
+
+                if ($seatConfigurationChanged) {
+                    throw ValidationException::withMessages([
+                        'capacity' => 'Konfiguraciju sjedišta, kapacitet, maksimalan broj karata i cijene nije moguće mijenjati jer za ovaj događaj već postoji rezervacija.',
+                    ]);
+                }
+            }
+
+            $oldImage = $lockedEvent->image;
+
+            if ($request->hasFile('image')) {
+                $validated['image'] = $request->file('image')
+                    ->store('events', 'public');
+            } else {
+                unset($validated['image']);
+            }
+
+            $lockedEvent->update($validated);
+
+            $lockedEvent->categories()->sync($categoryIds);
+            $lockedEvent->tags()->sync($tagIds);
+
+            if (! $hasReservations) {
+                $lockedEvent->seatPriceGroups()->delete();
+                $lockedEvent->seatPriceGroups()->createMany($priceGroups);
+            }
+
+            return $oldImage;
         });
+
+        if (
+            $request->hasFile('image')
+            && $oldImage
+        ) {
+            Storage::disk('public')->delete($oldImage);
+        }
 
         return redirect()
             ->route('admin.events.index')
             ->with('success', 'Događaj je uspješno ažuriran.');
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $groups
+     * @return array<int, array{from_row: int, to_row: int, price_cents: int}>
+     */
+    private function normalizePriceGroups(array $groups): array
+    {
+        $normalized = array_map(
+            fn (array $group): array => [
+                'from_row' => (int) $group['from_row'],
+                'to_row' => (int) $group['to_row'],
+                'price_cents' => (int) round(
+                    (float) $group['price'] * 100
+                ),
+            ],
+            $groups,
+        );
+
+        usort(
+            $normalized,
+            fn (array $a, array $b): int => $a['from_row'] <=> $b['from_row']
+        );
+
+        return $normalized;
     }
 
     public function duplicate(Event $event): RedirectResponse
