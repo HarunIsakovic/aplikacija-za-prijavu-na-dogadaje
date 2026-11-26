@@ -10,6 +10,7 @@ use App\Http\Controllers\EventRegistrationController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\ReservationController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\TicketController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -56,6 +57,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/reservations/{reservation}/cancel', [ReservationController::class, 'cancel'])
         ->name('reservations.cancel');
+
+    Route::get('/my-tickets', [TicketController::class, 'index'])
+        ->name('tickets.index');
+
+    Route::get('/tickets/{ticketUuid}/pdf', [TicketController::class, 'download'])
+        ->name('tickets.download');
 });
 
 Route::middleware(['auth', 'admin'])

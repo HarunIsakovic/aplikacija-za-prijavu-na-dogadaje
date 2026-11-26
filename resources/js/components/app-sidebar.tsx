@@ -1,5 +1,5 @@
 ﻿import { Link, usePage } from '@inertiajs/react';
-import { CalendarDays, ClipboardList, LayoutGrid } from 'lucide-react';
+import { CalendarDays, ClipboardList, LayoutGrid, Ticket } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -31,6 +31,11 @@ const userNavItems: NavItem[] = [
         href: '/my-registrations',
         icon: ClipboardList,
     },
+    {
+        title: 'Moje karte',
+        href: '/my-tickets',
+        icon: Ticket,
+    },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -48,6 +53,11 @@ const adminNavItems: NavItem[] = [
         title: 'Moje prijave',
         href: '/my-registrations',
         icon: ClipboardList,
+    },
+    {
+        title: 'Moje karte',
+        href: '/my-tickets',
+        icon: Ticket,
     },
     {
         title: 'Administracija',
