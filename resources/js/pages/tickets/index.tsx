@@ -32,7 +32,7 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
         <article className="rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
             <div className="flex items-start justify-between gap-3">
                 <div>
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wider text-primary">
+                    <p className="mb-2 text-xs font-medium tracking-wider text-primary uppercase">
                         Digitalna ulaznica
                     </p>
 
@@ -54,12 +54,16 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
 
                 <div className="flex items-center gap-3">
                     <MapPin className="size-4 shrink-0 text-muted-foreground" />
-                    <span>{ticket.event_location || 'Lokacija nije navedena'}</span>
+                    <span>
+                        {ticket.event_location || 'Lokacija nije navedena'}
+                    </span>
                 </div>
 
                 <div className="flex items-center gap-3">
                     <CalendarDays className="size-4 shrink-0 text-muted-foreground" />
-                    <span>{ticket.event_starts_at ?? 'Datum nije naveden'}</span>
+                    <span>
+                        {ticket.event_starts_at ?? 'Datum nije naveden'}
+                    </span>
                 </div>
             </div>
 
