@@ -181,7 +181,7 @@ class EventController extends Controller
                 EventSeat::STATUS_RESERVED,
                 EventSeat::STATUS_SOLD,
             ])
-            ->get(['id', 'row', 'number', 'status', 'price']);
+            ->get(['row_number', 'seat_number', 'status']);
 
         $event->setAttribute(
             'available_seat_count',
